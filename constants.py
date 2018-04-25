@@ -19,8 +19,6 @@ paths = {
     },
     'test': {
         'dir': join(data_dir, 'test'),
-        # For sake of consistency this is called labels, but there are of
-        # course no labels in this file
         'csv': join(data_dir, 'test.csv'),
     },
     'dummy': {
