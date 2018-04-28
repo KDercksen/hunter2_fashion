@@ -6,6 +6,7 @@ from fashion_code.callbacks import F1Utility
 from fashion_code.constants import num_classes
 from fashion_code.generators import SequenceFromDisk
 from keras.applications.inception_v3 import InceptionV3, preprocess_input
+from keras.callbacks import ReduceLROnPlateau
 from keras.layers import Dense
 from keras.models import Model
 import sys
@@ -53,6 +54,7 @@ def train_model(args):
     # Fit model
     pm = F1Utility(valid_gen, test_generator=test_gen,
                    save_path=args.save_filename)
+    lr = ReduceLROnPlateau(monitor='val_f1', patience=4, factor=.5)
 
     train_steps = args.train_steps or len(train_gen)
 
@@ -63,7 +65,7 @@ def train_model(args):
                         workers=8,
                         # This callback does validation, checkpointing and
                         # submission creation
-                        callbacks=[pm],
+                        callbacks=[pm, lr],
                         verbose=1)
 
 

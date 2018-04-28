@@ -17,7 +17,7 @@ import pandas as pd
 class F1Utility(Callback):
 
     def __init__(self, validation_generator, test_generator=None,
-                 num_thresholds=21, save_path=None):
+                 num_thresholds=11, save_path=None):
         self.validation_generator = validation_generator
         self.test_generator = test_generator
         self.thresholds = np.linspace(0, 1, num_thresholds+2)[1:-1]
