@@ -3,10 +3,14 @@
 
 from os.path import join
 
-# Paths
+# Paths relative to the project root directory
 data_dir = './data'
-
+model_dir = './models'
+result_dir = './results'
 paths = {
+    'data': data_dir,
+    'models': model_dir,
+    'results': result_dir,
     'train': {
         'dir': join(data_dir, 'train'),
         'labels': join(data_dir, 'labels_train.npy'),
@@ -25,3 +29,7 @@ paths = {
         'csv': join(data_dir, 'dummy_label_col.csv'),
     },
 }
+
+# Number of classes
+with open(paths['dummy']['csv']) as f:
+    num_classes = len(f.read().strip().split(','))

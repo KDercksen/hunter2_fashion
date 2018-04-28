@@ -57,6 +57,6 @@ if __name__ == '__main__':
     dummy_label_col.to_csv(os.path.join(out_dir, 'dummy_label_col.csv'),
                            index=False)
     np.save(os.path.join(out_dir, 'labels_train.npy'), train_labels)
-    np.save(os.path.join(out_dir, 'labels_validation.npy'), train_labels)
+    np.save(os.path.join(out_dir, 'labels_validation.npy'), validation_labels)
 
     sys.exit(0)

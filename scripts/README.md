@@ -24,3 +24,15 @@ Usage:
 ### multilabel_nn.py
 Proof of concept for multilabel classification. We use a `sigmoid` layer and
 `binary_crossentropy` as loss function.
+
+### simple_inceptionv3.py
+Script to train two dense layers on top of a frozen Inception V3 pretrained on
+ImageNet.
+
+Arguments:
+
+    --batch-size <int> (default 64)
+    --epochs <int> (default 10)
+    --train-steps <int> (default full training set)
+    --save-filename <str> (required, filename to save model to)
+    --create-submission (if supplied, create submission after training)
