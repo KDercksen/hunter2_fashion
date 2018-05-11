@@ -11,11 +11,12 @@ environment. Then install this project with the editable option:
     $ pip install -e .
 
 Download the Kaggle data files into the `data` directory, and run the following
-scripts:
+scripts (includes deletion of broken images):
 
     $ python scripts/download_images.py ./data/train.json ./data/train
     $ python scripts/download_images.py ./data/validation.json ./data/validation
     $ python scripts/download_images.py ./data/test.json ./data/test
+    $ python scripts/delete_broken_images.py
 
     $ python scripts/create_labels.py ./data/ ./data/
 
