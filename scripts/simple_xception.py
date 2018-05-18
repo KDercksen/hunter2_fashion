@@ -5,7 +5,7 @@ from argparse import ArgumentParser
 from fashion_code.callbacks import F1Utility
 from fashion_code.constants import num_classes
 from fashion_code.generators import SequenceFromDisk
-from keras.applications.inception_v3 import InceptionV3, preprocess_input
+from keras.applications.xception import Xception, preprocess_input
 from keras.callbacks import ReduceLROnPlateau
 from keras.layers import Dense
 from keras.models import Model
@@ -13,7 +13,7 @@ import sys
 
 
 def build_model(num_classes, freeze_base=True):
-    base_model = InceptionV3(weights='imagenet', pooling='avg',
+    base_model = Xception(weights='imagenet', pooling='avg',
                              include_top=False)
     x = base_model.output
     x = Dense(2048, activation='relu', kernel_initializer='he_normal')(x)
@@ -70,7 +70,7 @@ def train_model(args):
 
 
 if __name__ == '__main__':
-    p = ArgumentParser('Simple Inception V3 script.')
+    p = ArgumentParser('Simple Xception script.')
     p.add_argument('--batch-size', type=int, default=64,
                    help='Batch size of images to read into memory')
     p.add_argument('--epochs', type=int, default=10,
@@ -87,3 +87,5 @@ if __name__ == '__main__':
     args = p.parse_args()
 
     train_model(args)
+
+    sys.exit(0)
