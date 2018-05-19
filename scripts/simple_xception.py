@@ -3,12 +3,13 @@
 
 from argparse import ArgumentParser
 from fashion_code.callbacks import F1Utility
-from fashion_code.constants import num_classes
+from fashion_code.constants import num_classes, paths
 from fashion_code.generators import SequenceFromDisk
 from keras.applications.xception import Xception, preprocess_input
 from keras.callbacks import ReduceLROnPlateau
 from keras.layers import Dense
-from keras.models import Model
+from keras.models import Model, load_model
+from os.path import join
 import sys
 
 
@@ -31,14 +32,18 @@ def build_model(num_classes, freeze_base=True):
 def train_model(args):
     # Some variables
     batch_size = args.batch_size
+    chpt = args.continue_from_chpt
     epochs = args.epochs
     img_size = (299, 299)
     loss = 'binary_crossentropy'
     optimizer = 'rmsprop'
 
     # Create and compile model
-    model = build_model(num_classes)
-    model.compile(optimizer='rmsprop', loss='binary_crossentropy')
+    if chpt:
+        model = load_model(join(paths['models'], chpt))
+    else:
+        model = build_model(num_classes)
+        model.compile(optimizer='rmsprop', loss='binary_crossentropy')
 
     # Create data generators
     train_gen = SequenceFromDisk('train', batch_size, img_size,
@@ -82,6 +87,8 @@ if __name__ == '__main__':
     p.add_argument('--save-filename', type=str, required=True,
                    help='Filename for saved model (will be appended to models '
                         'directory)')
+    p.add_argument('--continue-from-chpt', type=str,
+                   help='Continue training from h5 checkpoint file')
     p.add_argument('--create-submission', action='store_true',
                    help='If given, create a submission after training')
     args = p.parse_args()

@@ -36,3 +36,5 @@ Arguments:
     --train-steps <int> (default full training set)
     --save-filename <str> (required, filename to save model to)
     --create-submission (if supplied, create submission after training)
+    --continue-from-chpt <str> (if supplied, continue training from this
+                                checkpoint filename)
