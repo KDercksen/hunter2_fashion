@@ -37,6 +37,8 @@ def train_model(args):
     img_size = (299, 299)
     loss = 'binary_crossentropy'
     optimizer = 'rmsprop'
+    use_multiprocessing = True
+    workers = 8
 
     # Create and compile model
     if chpt:
@@ -63,11 +65,15 @@ def train_model(args):
 
     train_steps = args.train_steps or len(train_gen)
 
+    if args.windows:
+        use_multiprocessing = False
+        workers = 0
+
     model.fit_generator(train_gen,
                         epochs=epochs,
                         steps_per_epoch=train_steps,
-                        use_multiprocessing=True,
-                        workers=8,
+                        use_multiprocessing=use_multiprocessing,
+                        workers=workers,
                         # This callback does validation, checkpointing and
                         # submission creation
                         callbacks=[pm, lr],
@@ -91,6 +97,8 @@ if __name__ == '__main__':
                    help='Continue training from h5 checkpoint file')
     p.add_argument('--create-submission', action='store_true',
                    help='If given, create a submission after training')
+    p.add_argument('--windows', action='store_true',
+                   help='Disable multiprocessing in order to run on Windows')
     args = p.parse_args()
 
     train_model(args)

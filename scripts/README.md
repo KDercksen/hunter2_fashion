@@ -38,3 +38,4 @@ Arguments:
     --create-submission (if supplied, create submission after training)
     --continue-from-chpt <str> (if supplied, continue training from this
                                 checkpoint filename)
+    --windows (if supplied, disable multiprocessing)
