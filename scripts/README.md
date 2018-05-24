@@ -25,8 +25,8 @@ Usage:
 Proof of concept for multilabel classification. We use a `sigmoid` layer and
 `binary_crossentropy` as loss function.
 
-### simple_inceptionv3.py
-Script to train two dense layers on top of a frozen Inception V3 pretrained on
+### simple_xception.py
+Script to train two dense layers on top of a frozen Xception pretrained on
 ImageNet.
 
 Arguments:
@@ -36,3 +36,6 @@ Arguments:
     --train-steps <int> (default full training set)
     --save-filename <str> (required, filename to save model to)
     --create-submission (if supplied, create submission after training)
+    --continue-from-chpt <str> (if supplied, continue training from this
+                                checkpoint filename)
+    --windows (if supplied, disable multiprocessing)
