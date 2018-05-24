@@ -17,12 +17,12 @@ import pandas as pd
 class F1Utility(Callback):
 
     def __init__(self, validation_generator, test_generator=None,
-                 num_thresholds=11, save_path=None):
+                 num_thresholds=11, save_fname=None, save_path=None):
         self.validation_generator = validation_generator
         self.test_generator = test_generator
         self.thresholds = np.linspace(0, 1, num_thresholds+2)[1:-1]
-        self.save_fname = save_path
-        self.save_path = join(paths['models'], save_path)
+        self.save_fname = save_fname
+        self.save_path = join(save_path, save_fname)
 
     def on_train_begin(self, logs={}):
         self.f1s = []
@@ -33,7 +33,7 @@ class F1Utility(Callback):
         if self.test_generator:
             print('Training done. Running predictions...')
             best_model = load_model(self.save_path)
-            params = pd.read_csv(f'{self.save_path}-scores.csv')
+            params = pd.read_csv('{}-scores.csv'.format(self.save_path))
             classes = pd.read_csv(paths['dummy']['csv']).columns
             threshold = params['threshold'].values[0]
 
@@ -54,8 +54,8 @@ class F1Utility(Callback):
                 submission_list.append([i, labels])
 
             submission_path = join(paths['results'],
-                                   f'{self.save_fname}-submission.csv')
-            print(f'Saving predictions to {submission_path}')
+                                   '{}-submission.csv'.format(self.save_fname))
+            print('Saving predictions to {}'.format(submission_path))
             columns = ['image_id', 'label_id']
             pd.DataFrame(submission_list, columns=columns) \
                         .to_csv(submission_path, index=False)
@@ -93,8 +93,7 @@ class F1Utility(Callback):
 
         logs['val_f1'] = best_f1
 
-        print(f'f1: {best_f1:.4f} - precision: {best_prec:.4f} - '
-              f'recall: {best_rec:.4f}')
+        print('f1: {:.4f} - precision: {:.4f} - recall: {:.4f}'.format(best_f1, best_prec, recall))
 
         if best_f1 >= np.max(self.f1s) and self.save_path:
             print('F1 improved, saving model and scores...')
@@ -105,5 +104,5 @@ class F1Utility(Callback):
                 'precision': best_prec,
                 'recall': best_rec,
             }
-            df_path = join(f'{self.save_path}-scores.csv')
+            df_path = join('{}-scores.csv'.format(self.save_path))
             pd.DataFrame(scores, index=[0]).to_csv(df_path)

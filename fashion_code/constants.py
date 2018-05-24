@@ -30,6 +30,13 @@ paths = {
     },
 }
 
-# Number of classes
-with open(paths['dummy']['csv']) as f:
-    num_classes = len(f.read().strip().split(','))
+GCP_paths = {
+    'data': 'gs://imaterialist_challenge_data',
+    'models': 'gs://hunter2_fashion/models',
+    'results': 'gs://hunter2_fashion/results',
+    'train': join(data_dir, 'train'),
+    'validation': join(data_dir, 'validation'),
+    'test':  join(data_dir, 'test'),
+}
+
+num_classes = 228
