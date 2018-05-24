@@ -1,0 +1,1 @@
+gcloud ml-engine jobs submit training job_name --stream-logs --runtime-version 1.4 --job-dir gs://hunter2_fashion/job1 --package-path scripts --module-name scripts.simple_inceptionv3 --region europe-west1 --config ./config.yaml
