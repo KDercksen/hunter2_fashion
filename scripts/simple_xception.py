@@ -3,8 +3,8 @@
 
 from argparse import ArgumentParser
 from fashion_code.callbacks import F1Utility
-from fashion_code.constants import num_classes, paths
-from fashion_code.generators import SequenceFromDisk
+from fashion_code.constants import num_classes, paths, GCP_paths
+from fashion_code.generators import SequenceFromDisk, SequenceFromGCP
 from keras.applications.xception import Xception, preprocess_input
 from keras.callbacks import ReduceLROnPlateau
 from keras.layers import Dense
@@ -38,6 +38,10 @@ def train_model(args):
     optimizer = 'rmsprop'
     use_multiprocessing = True
     workers = 8
+    if args.gcp:
+        path_dict = GCP_paths
+    else:
+        path_dict = paths
 
     # Create and compile model
     if chpt:
@@ -47,19 +51,30 @@ def train_model(args):
         model.compile(optimizer='rmsprop', loss='binary_crossentropy')
 
     # Create data generators
-    train_gen = SequenceFromDisk('train', batch_size, img_size,
-                                 preprocessfunc=preprocess_input)
-    valid_gen = SequenceFromDisk('validation', batch_size, img_size,
-                                 preprocessfunc=preprocess_input)
-    if args.create_submission:
-        test_gen = SequenceFromDisk('test', batch_size, img_size,
-                                    preprocessfunc=preprocess_input)
+    if args.gcp:
+        train_gen = SequenceFromGCP('train', batch_size, img_size,
+                                     preprocessfunc=preprocess_input)
+        valid_gen = SequenceFromGCP('validation', batch_size, img_size,
+                                     preprocessfunc=preprocess_input)
+        if args.create_submission:
+            test_gen = SequenceFromGCP('test', batch_size, img_size,
+                                        preprocessfunc=preprocess_input)
+        else:
+            test_gen = None
     else:
-        test_gen = None
+        train_gen = SequenceFromDisk('train', batch_size, img_size,
+                                    preprocessfunc=preprocess_input)
+        valid_gen = SequenceFromDisk('validation', batch_size, img_size,
+                                    preprocessfunc=preprocess_input)
+        if args.create_submission:
+            test_gen = SequenceFromDisk('test', batch_size, img_size,
+                                       preprocessfunc=preprocess_input)
+        else:
+            test_gen = None
 
     # Fit model
     pm = F1Utility(valid_gen, test_generator=test_gen,
-                   save_path=args.save_filename)
+                   save_path=path_dict['models'], save_fname=args.save_filename)
     lr = ReduceLROnPlateau(monitor='val_f1', patience=4, factor=.5)
 
     train_steps = args.train_steps or len(train_gen)
@@ -98,6 +113,10 @@ if __name__ == '__main__':
                    help='If given, create a submission after training')
     p.add_argument('--windows', action='store_true',
                    help='Disable multiprocessing in order to run on Windows')
+    p.add_argument('--gcp', action='store_true',
+                   help='Change file loading for Google Cloud Platform')
+    p.add_argument('--job-dir', type=str,
+                   help='Location of the job directory for the current GCP job')
     args = p.parse_args()
 
     train_model(args)

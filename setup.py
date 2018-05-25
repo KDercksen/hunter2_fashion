@@ -10,4 +10,7 @@ setup(
     name='iMaterialist Challenge (Fashion) App',
     packages=find_packages(),
     version=__version__,
+    install_requires=[
+          'keras',
+    ],
 )
