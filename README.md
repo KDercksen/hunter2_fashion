@@ -39,6 +39,9 @@ Run the following command, replacing job_name with a nice name for your session 
     --package-path scripts \
     --module-name scripts.simple_inceptionv3 \
     --region europe-west1 \
-    --config ./config.yaml
+    --config ./config.yaml \
+    -- \
+    --save-filename test \
+    --gcp
     
 
