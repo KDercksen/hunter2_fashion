@@ -17,7 +17,6 @@ def build_model(num_classes, freeze_base=True):
     base_model = Xception(weights='imagenet', pooling='avg',
                              include_top=False)
     x = base_model.output
-    x = Dense(2048, activation='relu', kernel_initializer='he_normal')(x)
     predictions = Dense(num_classes, activation='sigmoid',
                         kernel_initializer='he_normal')(x)
     model = Model(base_model.inputs, predictions)
