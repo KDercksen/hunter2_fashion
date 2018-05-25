@@ -1,4 +1,7 @@
 
+
+The object detection script was changed, isntead of saving the images with the box and labels it cuts the images with the area of the min/max of x's and y's of the box areas.
+
 If you do not have protobuffer in your environment you'll have to set it up.
 
 You can download it here: https://github.com/google/protobuf/releases
@@ -17,3 +20,9 @@ After that, download http://download.tensorflow.org/models/object_detection/fast
 Put it in the hunter2_fashion folder and untar? it
 
 Now you should be able to run python object_detection.py.
+
+If you wanna run the images in a smaller number of images change the range of values in the line
+
+TEST_IMAGE_PATHS = [ os.path.join(PATH_TO_TEST_IMAGES_DIR, '{}.jpg'.format(i)) for i in range(0,len([name for name in os.listdir(PATH_TO_TEST_IMAGES_DIR) if os.path.isfile(os.path.join(PATH_TO_TEST_IMAGES_DIR, name))])+1) ]
+
+This should also take into account the images in the train dataset, which are not fully order due to deletion of broken images.
