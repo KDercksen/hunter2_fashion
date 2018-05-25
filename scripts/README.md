@@ -39,3 +39,11 @@ Arguments:
     --continue-from-chpt <str> (if supplied, continue training from this
                                 checkpoint filename)
     --windows (if supplied, disable multiprocessing)
+
+### prediction_transformer.py
+Script to fit models on network predictions.
+
+Arguments:
+
+    network-filename (filename of the network to load from `models` directory)
+    transformer (`nn` and `rf` are currently implemented)
