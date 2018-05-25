@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from fashion_code.constants import paths
+from fashion_code.util import find_thresholds
 from keras.callbacks import Callback
 from keras.models import load_model
 from os.path import join
@@ -17,12 +18,12 @@ import pandas as pd
 class F1Utility(Callback):
 
     def __init__(self, validation_generator, test_generator=None,
-                 num_thresholds=11, save_path=None):
+                 save_fname=None, save_path=None):
+        super().__init__()
         self.validation_generator = validation_generator
         self.test_generator = test_generator
-        self.thresholds = np.linspace(0, 1, num_thresholds+2)[1:-1]
-        self.save_fname = save_path
-        self.save_path = join(paths['models'], save_path)
+        self.save_fname = save_fname
+        self.save_path = join(save_path, save_fname)
 
     def on_train_begin(self, logs={}):
         self.f1s = []
@@ -33,15 +34,14 @@ class F1Utility(Callback):
         if self.test_generator:
             print('Training done. Running predictions...')
             best_model = load_model(self.save_path)
-            params = pd.read_csv(f'{self.save_path}-scores.csv')
+            thresholds = np.load('{}-thresholds.npy'.format(self.save_path))
             classes = pd.read_csv(paths['dummy']['csv']).columns
-            threshold = params['threshold'].values[0]
 
             preds = best_model.predict_generator(self.test_generator,
                                                  use_multiprocessing=True,
                                                  workers=8,
                                                  verbose=1)
-            preds = preds > threshold
+            preds = preds > thresholds
 
             print('Converting labels...')
             mlb = MultiLabelBinarizer(classes=classes)
@@ -54,8 +54,8 @@ class F1Utility(Callback):
                 submission_list.append([i, labels])
 
             submission_path = join(paths['results'],
-                                   f'{self.save_fname}-submission.csv')
-            print(f'Saving predictions to {submission_path}')
+                                   '{}-submission.csv'.format(self.save_fname))
+            print('Saving predictions to {}'.format(submission_path))
             columns = ['image_id', 'label_id']
             pd.DataFrame(submission_list, columns=columns) \
                         .to_csv(submission_path, index=False)
@@ -69,41 +69,30 @@ class F1Utility(Callback):
         preds = np.asarray(preds)
         targets = self.validation_generator.get_all_labels()
 
-        local_f1s = []
-        local_precs = []
-        local_recs = []
-        for th in self.thresholds:
-            local_preds = preds > th
-            f1 = f1_score(targets, local_preds, average='micro')
-            prec = precision_score(targets, local_preds, average='micro')
-            rec = recall_score(targets, local_preds, average='micro')
+        thresholds = find_thresholds(targets, preds)
+        preds = preds > thresholds
 
-            local_f1s.append(f1)
-            local_precs.append(prec)
-            local_recs.append(rec)
+        f1 = f1_score(targets, preds, average='micro')
+        precision = precision_score(targets, preds, average='micro')
+        recall = recall_score(targets, preds, average='micro')
 
-        best_f1_idx = np.argmax(local_f1s)
-        best_f1 = local_f1s[best_f1_idx]
-        best_prec = local_precs[best_f1_idx]
-        best_rec = local_recs[best_f1_idx]
+        self.f1s.append(f1)
+        self.precisions.append(precision)
+        self.recalls.append(recall)
 
-        self.f1s.append(best_f1)
-        self.precisions.append(best_prec)
-        self.recalls.append(best_rec)
+        logs['val_f1'] = f1
 
-        logs['val_f1'] = best_f1
+        print('f1: {:.4f} - precision: {:.4f} - recall: {:.4f}'
+              .format(f1, precision, recall))
 
-        print(f'f1: {best_f1:.4f} - precision: {best_prec:.4f} - '
-              f'recall: {best_rec:.4f}')
-
-        if best_f1 >= np.max(self.f1s) and self.save_path:
+        if f1 >= np.max(self.f1s) and self.save_path:
             print('F1 improved, saving model and scores...')
             self.model.save(self.save_path)
             scores = {
-                'threshold': self.thresholds[best_f1_idx],
-                'f1': best_f1,
-                'precision': best_prec,
-                'recall': best_rec,
+                'f1': f1,
+                'precision': precision,
+                'recall': recall,
             }
-            df_path = join(f'{self.save_path}-scores.csv')
+            df_path = join('{}-scores.csv'.format(self.save_path))
             pd.DataFrame(scores, index=[0]).to_csv(df_path)
+            np.save('{}-thresholds.npy'.format(self.save_path), thresholds)

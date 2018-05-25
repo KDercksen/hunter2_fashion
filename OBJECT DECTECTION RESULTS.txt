@@ -1,0 +1,29 @@
+test/971
+Dress 0.72
+Face 0.54
+Girl 0.50
+Woman 0.36
+
+test/974
+Dress 0.77
+Clothing 0.36
+Dress 0.34
+
+test/140
+Trousers 0.80
+Jeans 0.73
+Footwear 0.57
+Footwear 0.35
+Trousers 0.33
+
+test/327
+Shirt 0.81
+Clothing 0.49
+
+test/406
+Dress 0.89
+Dress 0.63
+Footwear 0.55
+Girl 0.45
+Girl 0.37
+Skirt 0.36
