@@ -45,5 +45,10 @@ Script to fit models on network predictions.
 
 Arguments:
 
-    network-filename (filename of the network to load from `models` directory)
-    transformer (`nn` and `rf` are currently implemented)
+    network-filename (required, filename of the network to load from `models`
+                      directory)
+    --epochs <int> (default 200)
+    --train-steps <int>
+    --batch-size <int> (default 128)
+    --save-filename <str> (required, filename to save model to)
+    --create-submission (if supplied, create submission)

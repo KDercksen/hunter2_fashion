@@ -2,89 +2,77 @@
 # -*- coding: utf-8 -*-
 
 from argparse import ArgumentParser
+from fashion_code.callbacks import F1Utility
 from fashion_code.constants import num_classes, paths
 from fashion_code.generators import SequenceFromDisk
 from keras.applications.xception import preprocess_input
 from keras.layers import Dense, Input
 from keras.models import Model, load_model
+from keras.optimizers import Adam
 from os.path import join
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import f1_score
 import numpy as np
-import pandas as pd
 import sys
 
 
-def rf_transformer():
-    model = RandomForestClassifier(n_estimators=50, n_jobs=8, verbose=1)
-    return model
-
-
-def nn_transformer():
-    inputs = Input(shape=(num_classes,))
-    x = Dense(num_classes*3, activation='relu',
-              kernel_initializer='he_normal')(inputs)
-    x = Dense(num_classes*2, activation='relu',
-              kernel_initializer='he_normal')(x)
-    outputs = Dense(num_classes, activation='sigmoid',
+def nn_transformer(model):
+    x = model.output
+    for i in range(4):
+        x = Dense(num_classes*(2+i), activation='relu',
+                  name='trans_dense_{}'.format(i),
+                  kernel_initializer='he_normal')(x)
+    outputs = Dense(num_classes, activation='sigmoid', name='trans_out',
                     kernel_initializer='he_normal')(x)
-    model = Model(inputs, outputs)
-    model.compile(optimizer='adam', loss='binary_crossentropy',
-                  metrics=['accuracy'])
-    return model
+    transformer = Model(model.inputs, outputs)
 
+    for layer in model.layers:
+        layer.trainable = False
 
-def generate_data(network):
-    batch_size = 100
-    train_steps = 200
-    train_gen = SequenceFromDisk('train', batch_size, (299, 299),
-                                 preprocess_input)
-    valid_gen = SequenceFromDisk('validation', batch_size, (299, 299),
-                                 preprocess_input)
-
-    # Generate 20k training predictions to test
-    x_train = network.predict_generator(train_gen, steps=train_steps,
-                                        verbose=1)
-    x_valid = network.predict_generator(valid_gen, verbose=1)
-
-    y_train = np.load(paths['train']['labels'])[:batch_size*train_steps]
-    y_valid = np.load(paths['validation']['labels'])
-
-    return x_train, x_valid, y_train, y_valid
-
-
-AVAILABLE_MODELS = {
-    'rf': rf_transformer,
-    'nn': nn_transformer,
-}
+    optimizer = Adam(decay=1e-5)
+    transformer.compile(optimizer=optimizer, loss='binary_crossentropy')
+    return transformer
 
 
 if __name__ == '__main__':
     p = ArgumentParser('Predict transformations for a given neural network')
     p.add_argument('filename', type=str,
                    help='The saved model to create initial predictions')
-    p.add_argument('transformer', type=str, choices=AVAILABLE_MODELS.keys(),
-                   help='The type of model to train as prediction transformer')
+    p.add_argument('--save-filename', type=str,
+                    help='Model to train transformer on top of')
+    p.add_argument('--epochs', type=int, default=10, help='Epochs')
+    p.add_argument('--batch-size', type=int, default=128, help='Batch size')
+    p.add_argument('--train-steps', type=int, help='Steps')
+    p.add_argument('--create-submission', action='store_true')
     args = p.parse_args()
 
+    batch_size = args.batch_size
     fname = join(paths['models'], args.filename)
-    network = load_model(fname)
-    threshold = pd.read_csv(fname + '-scores.csv')['threshold'].values[0]
-    transformer = AVAILABLE_MODELS[args.transformer]()
+    model = load_model(fname)
+    threshold = .5
+    epochs = args.epochs
 
-    x_train, x_valid, y_train, y_valid = generate_data(network)
-    x_train = x_train > threshold
-    x_valid = x_valid > threshold
+    train_gen = SequenceFromDisk('train', batch_size, (299, 299),
+                                 preprocessfunc=preprocess_input)
+    valid_gen = SequenceFromDisk('validation', batch_size, (299, 299),
+                                 preprocessfunc=preprocess_input)
 
-    if args.transformer == 'nn':
-        transformer.fit(x_train, y_train,
-                        epochs=20,
-                        verbose=1)
+    if args.create_submission:
+        test_gen = SequenceFromDisk('test', batch_size, (299, 299),
+                                    preprocessfunc=preprocess_input)
     else:
-        # For sklearn transformers
-        transformer.fit(x_train, y_train)
-    preds = transformer.predict(x_valid) > threshold
-    score = f1_score(y_valid, preds, average='micro')
-    print(f'F1 score: {score}')
+        test_gen = None
+
+    train_steps = args.train_steps or len(train_gen)
+    transformer = nn_transformer(model)
+
+    pm = F1Utility(valid_gen, test_generator=test_gen,
+                   save_path=paths['models'], save_fname=args.save_filename)
+
+    transformer.fit_generator(train_gen,
+                              epochs=epochs,
+                              steps_per_epoch=train_steps,
+                              use_multiprocessing=True,
+                              workers=8,
+                              callbacks=[pm],
+                              verbose=1)
 
     sys.exit(0)
