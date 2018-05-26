@@ -9,7 +9,7 @@ from keras.applications.xception import Xception, preprocess_input
 from keras.callbacks import ReduceLROnPlateau
 from keras.layers import Dense
 from keras.models import Model, load_model
-from keras.optimizer import Adam
+from keras.optimizers import Adam
 from os.path import join
 import sys
 
