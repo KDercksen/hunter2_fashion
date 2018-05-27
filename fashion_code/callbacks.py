@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from fashion_code.constants import paths
-from fashion_code.util import find_thresholds
 from keras.callbacks import Callback
 from keras.models import load_model
 from os.path import join
@@ -34,14 +33,13 @@ class F1Utility(Callback):
         if self.test_generator:
             print('Training done. Running predictions...')
             best_model = load_model(self.save_path)
-            thresholds = np.load('{}-thresholds.npy'.format(self.save_path))
             classes = pd.read_csv(paths['dummy']['csv']).columns
 
             preds = best_model.predict_generator(self.test_generator,
                                                  use_multiprocessing=True,
                                                  workers=8,
                                                  verbose=1)
-            preds = preds > thresholds
+            preds = preds > .5
 
             print('Converting labels...')
             mlb = MultiLabelBinarizer(classes=classes)
@@ -66,11 +64,8 @@ class F1Utility(Callback):
                                              use_multiprocessing=True,
                                              workers=8,
                                              verbose=1)
-        preds = np.asarray(preds)
+        preds = preds > .5
         targets = self.validation_generator.get_all_labels()
-
-        thresholds = find_thresholds(targets, preds)
-        preds = preds > thresholds
 
         f1 = f1_score(targets, preds, average='micro')
         precision = precision_score(targets, preds, average='micro')
@@ -95,4 +90,3 @@ class F1Utility(Callback):
             }
             df_path = join('{}-scores.csv'.format(self.save_path))
             pd.DataFrame(scores, index=[0]).to_csv(df_path)
-            np.save('{}-thresholds.npy'.format(self.save_path), thresholds)
