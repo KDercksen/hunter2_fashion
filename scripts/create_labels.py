@@ -31,6 +31,12 @@ if __name__ == '__main__':
     train_merge['imageId'] = train_merge['imageId'].astype(np.uint32)
     train_merge['labelId'] = train_merge['labelId'].astype(list)
 
+    train_filenames = os.listdir(os.path.join(data_dir, 'train'))
+    if train_filenames:
+        train_filenames = [int(os.path.splitext(os.path.basename(f))[0])
+                           for f in train_filenames]
+        train_merge = train_merge[train_merge['imageId'].isin(train_filenames)]
+
     valid_merge = pd.merge(pd.DataFrame(validation['images']),
                            pd.DataFrame(validation['annotations']),
                            on='imageId',
