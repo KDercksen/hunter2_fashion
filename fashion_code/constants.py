@@ -10,6 +10,7 @@ result_dir = './results'
 paths = {
     'data': data_dir,
     'models': model_dir,
+    'models/stacks': join(model_dir, '/stacks'),
     'results': result_dir,
     'train': {
         'dir': join(data_dir, 'train'),

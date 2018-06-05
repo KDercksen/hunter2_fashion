@@ -6,6 +6,7 @@ from tensorflow.python.lib.io import file_io
 import os
 import io
 from PIL import Image
+import numpy as np
 
 
 def read_img(fname, size, gcp=False):

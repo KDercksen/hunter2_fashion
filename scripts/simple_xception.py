@@ -9,22 +9,21 @@ from keras.applications.xception import Xception, preprocess_input
 from keras.callbacks import ReduceLROnPlateau
 from keras.layers import Dense
 from keras.models import Model, load_model
+from keras.optimizers import Adam
 from os.path import join
 import sys
 
 
-def build_model(num_classes, freeze_base=True):
-    base_model = Xception(weights='imagenet', pooling='avg',
-                             include_top=False)
+def build_model(num_classes):
+    base_model = Xception(weights='imagenet', pooling='avg', include_top=False)
     x = base_model.output
     x = Dense(2048, activation='relu', kernel_initializer='he_normal')(x)
     predictions = Dense(num_classes, activation='sigmoid',
                         kernel_initializer='he_normal')(x)
     model = Model(base_model.inputs, predictions)
 
-    if freeze_base:
-        for layer in base_model.layers:
-            layer.trainable = False
+    for layer in base_model.layers:
+        layer.trainable = False
 
     return model
 
@@ -36,9 +35,9 @@ def train_model(args):
     epochs = args.epochs
     img_size = (299, 299)
     loss = 'binary_crossentropy'
-    optimizer = 'rmsprop'
-    use_multiprocessing = True
-    workers = 8
+    optimizer = Adam(decay=1e-6)
+    use_multiprocessing = not args.windows
+    workers = 0 if args.windows else 8
     if args.gcp:
         path_dict = GCP_paths
     else:
@@ -49,40 +48,35 @@ def train_model(args):
         model = load_model(join(paths['models'], chpt))
     else:
         model = build_model(num_classes)
-        model.compile(optimizer='rmsprop', loss='binary_crossentropy')
+        model.compile(optimizer=optimizer, loss=loss)
 
     # Create data generators
     if args.gcp:
         train_gen = SequenceFromGCP('train', batch_size, img_size,
-                                     preprocessfunc=preprocess_input)
+                                    preprocessfunc=preprocess_input)
         valid_gen = SequenceFromGCP('validation', batch_size, img_size,
-                                     preprocessfunc=preprocess_input)
+                                    preprocessfunc=preprocess_input)
         if args.create_submission:
             test_gen = SequenceFromGCP('test', batch_size, img_size,
-                                        preprocessfunc=preprocess_input)
+                                       preprocessfunc=preprocess_input)
         else:
             test_gen = None
     else:
         train_gen = SequenceFromDisk('train', batch_size, img_size,
-                                    preprocessfunc=preprocess_input)
+                                     preprocessfunc=preprocess_input)
         valid_gen = SequenceFromDisk('validation', batch_size, img_size,
-                                    preprocessfunc=preprocess_input)
+                                     preprocessfunc=preprocess_input)
         if args.create_submission:
             test_gen = SequenceFromDisk('test', batch_size, img_size,
-                                       preprocessfunc=preprocess_input)
+                                        preprocessfunc=preprocess_input)
         else:
             test_gen = None
 
     # Fit model
     pm = F1Utility(valid_gen, test_generator=test_gen,
                    save_path=path_dict['models'], save_fname=args.save_filename)
-    lr = ReduceLROnPlateau(monitor='val_f1', patience=4, factor=.5)
 
     train_steps = args.train_steps or len(train_gen)
-
-    if args.windows:
-        use_multiprocessing = False
-        workers = 0
 
     model.fit_generator(train_gen,
                         epochs=epochs,
@@ -91,7 +85,7 @@ def train_model(args):
                         workers=workers,
                         # This callback does validation, checkpointing and
                         # submission creation
-                        callbacks=[pm, lr],
+                        callbacks=[pm],
                         verbose=1)
 
 
@@ -116,8 +110,8 @@ if __name__ == '__main__':
                    help='Disable multiprocessing in order to run on Windows')
     p.add_argument('--gcp', action='store_true',
                    help='Change file loading for Google Cloud Platform')
-    p.add_argument('--job-dir', type=str,
-                   help='Location of the job directory for the current GCP job')
+    p.add_argument('--job-dir', type=str, help='Location of the job directory '
+                                               'for the current GCP job')
     args = p.parse_args()
 
     train_model(args)

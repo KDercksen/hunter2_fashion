@@ -17,10 +17,10 @@ import pandas as pd
 class F1Utility(Callback):
 
     def __init__(self, validation_generator, test_generator=None,
-                 num_thresholds=11, save_fname=None, save_path=None):
+                 save_fname=None, save_path=None):
+        super().__init__()
         self.validation_generator = validation_generator
         self.test_generator = test_generator
-        self.thresholds = np.linspace(0, 1, num_thresholds+2)[1:-1]
         self.save_fname = save_fname
         self.save_path = join(save_path, save_fname)
 
@@ -33,15 +33,13 @@ class F1Utility(Callback):
         if self.test_generator:
             print('Training done. Running predictions...')
             best_model = load_model(self.save_path)
-            params = pd.read_csv('{}-scores.csv'.format(self.save_path))
             classes = pd.read_csv(paths['dummy']['csv']).columns
-            threshold = params['threshold'].values[0]
 
             preds = best_model.predict_generator(self.test_generator,
                                                  use_multiprocessing=True,
                                                  workers=8,
                                                  verbose=1)
-            preds = preds > threshold
+            preds = preds > .5
 
             print('Converting labels...')
             mlb = MultiLabelBinarizer(classes=classes)
@@ -66,43 +64,29 @@ class F1Utility(Callback):
                                              use_multiprocessing=True,
                                              workers=8,
                                              verbose=1)
-        preds = np.asarray(preds)
+        preds = preds > .5
         targets = self.validation_generator.get_all_labels()
 
-        local_f1s = []
-        local_precs = []
-        local_recs = []
-        for th in self.thresholds:
-            local_preds = preds > th
-            f1 = f1_score(targets, local_preds, average='micro')
-            prec = precision_score(targets, local_preds, average='micro')
-            rec = recall_score(targets, local_preds, average='micro')
+        f1 = f1_score(targets, preds, average='micro')
+        precision = precision_score(targets, preds, average='micro')
+        recall = recall_score(targets, preds, average='micro')
 
-            local_f1s.append(f1)
-            local_precs.append(prec)
-            local_recs.append(rec)
+        self.f1s.append(f1)
+        self.precisions.append(precision)
+        self.recalls.append(recall)
 
-        best_f1_idx = np.argmax(local_f1s)
-        best_f1 = local_f1s[best_f1_idx]
-        best_prec = local_precs[best_f1_idx]
-        best_rec = local_recs[best_f1_idx]
+        logs['val_f1'] = f1
 
-        self.f1s.append(best_f1)
-        self.precisions.append(best_prec)
-        self.recalls.append(best_rec)
+        print('f1: {:.4f} - precision: {:.4f} - recall: {:.4f}'
+              .format(f1, precision, recall))
 
-        logs['val_f1'] = best_f1
-
-        print('f1: {:.4f} - precision: {:.4f} - recall: {:.4f}'.format(best_f1, best_prec, recall))
-
-        if best_f1 >= np.max(self.f1s) and self.save_path:
+        if f1 >= np.max(self.f1s) and self.save_path:
             print('F1 improved, saving model and scores...')
             self.model.save(self.save_path)
             scores = {
-                'threshold': self.thresholds[best_f1_idx],
-                'f1': best_f1,
-                'precision': best_prec,
-                'recall': best_rec,
+                'f1': f1,
+                'precision': precision,
+                'recall': recall,
             }
             df_path = join('{}-scores.csv'.format(self.save_path))
             pd.DataFrame(scores, index=[0]).to_csv(df_path)
