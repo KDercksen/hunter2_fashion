@@ -4,6 +4,7 @@
 from .constants import paths, GCP_paths
 from .util import read_img
 from keras.utils import Sequence
+from tensorflow.python.lib.io import file_io
 from os.path import join
 import keras.backend as K
 import numpy as np

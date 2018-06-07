@@ -90,3 +90,37 @@ class F1Utility(Callback):
             }
             df_path = join('{}-scores.csv'.format(self.save_path))
             pd.DataFrame(scores, index=[0]).to_csv(df_path)
+
+
+class Finetuning(Callback):
+
+    def __init__(self, validation_generator):
+        super().__init__()
+        self.validation_generator = validation_generator
+
+    def on_train_begin(self, logs={}):
+        self.f1s = []
+        self.block_indices = []
+        for i, layer in enumerate(self.model.layers):
+            if layer.name[0:3] == 'add':
+                self.block_indices.append(i)
+        self.block_indices = self.block_indices[::-1]
+        self.current_index = 0
+
+    def on_epoch_end(self, epoch, logs={}):
+        preds = self.model.predict_generator(self.validation_generator,
+                                             use_multiprocessing=True,
+                                             workers=8,
+                                             verbose=1)
+        preds = preds > .5
+        targets = self.validation_generator.get_all_labels()
+
+        f1 = f1_score(targets, preds, average='micro')
+        f1s.appends(f1)
+
+        if f1 <= f1s[epoch-1] and self.current_index < len(self.block_indices):
+            print('Unfreezing block {}...'.format(self.current_index))
+            for layer in self.model.layers[self.block_indices[self.current_index]:]:
+                layer.trainable = True
+            self.current_index += 1
+
