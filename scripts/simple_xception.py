@@ -6,7 +6,7 @@ from fashion_code.callbacks import F1Utility, FinetuningXception
 from fashion_code.constants import num_classes, paths, GCP_paths
 from fashion_code.generators import SequenceFromDisk, SequenceFromGCP
 from keras.applications.xception import Xception, preprocess_input
-from keras.callbacks import ReduceLROnPlateau
+from keras.callbacks import ModelCheckpoint
 from keras.layers import Dense
 from keras.models import Model, load_model
 from keras.optimizers import Adam
@@ -73,8 +73,8 @@ def train_model(args):
             test_gen = None
 
     # Fit model
-    pm = F1Utility(valid_gen, test_generator=test_gen,
-                   save_path=path_dict['models'], save_fname=args.save_filename)
+    save_file = join(paths['models'], args.save_filename)
+    mc = ModelCheckpoint(save_file, monitor='val_loss', save_best_only=True)
 
     uc = FinetuningXception()
 
@@ -83,6 +83,7 @@ def train_model(args):
     model.fit_generator(train_gen,
                         epochs=epochs,
                         steps_per_epoch=train_steps,
+                        validation_data=valid_gen,
                         use_multiprocessing=use_multiprocessing,
                         workers=workers,
                         # This callback does validation, checkpointing and
