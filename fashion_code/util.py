@@ -5,6 +5,7 @@ from PIL import Image
 from fashion_code.constants import paths
 from keras.preprocessing.image import img_to_array, load_img
 from sklearn.preprocessing import MultiLabelBinarizer
+from tensorflow.python.lib.io import file_io
 import io
 import numpy as np
 import os
