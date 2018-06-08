@@ -94,7 +94,7 @@ class F1Utility(Callback):
 
 class FinetuningXception(Callback):
 
-    def __init__(self, validation_generator):
+    def __init__(self):
         super().__init__()
 
     def on_train_begin(self, logs={}):
@@ -110,5 +110,8 @@ class FinetuningXception(Callback):
             print('Unfreezing block {}...'.format(self.current_index))
             for layer in self.model.layers[self.block_indices[self.current_index]:]:
                 layer.trainable = True
+            self.model.optimizer.lr = 0.3 * self.model.optimizer.lr #1/3rd because lr diminishes over 10 epochs
+            print('Learning rate = {}'.format(self.model.optimizer.lr))
             self.current_index += 1
+
 

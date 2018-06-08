@@ -76,7 +76,7 @@ def train_model(args):
     pm = F1Utility(valid_gen, test_generator=test_gen,
                    save_path=path_dict['models'], save_fname=args.save_filename)
 
-    uc = FinetuningXception(valid_gen)
+    uc = FinetuningXception()
 
     train_steps = args.train_steps or len(train_gen)
 
