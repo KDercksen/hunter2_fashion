@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from argparse import ArgumentParser
-from fashion_code.callbacks import F1Utility, Finetuning
+from fashion_code.callbacks import F1Utility, FinetuningXception
 from fashion_code.constants import num_classes, paths, GCP_paths
 from fashion_code.generators import SequenceFromDisk, SequenceFromGCP
 from keras.applications.xception import Xception, preprocess_input
@@ -76,7 +76,7 @@ def train_model(args):
     pm = F1Utility(valid_gen, test_generator=test_gen,
                    save_path=path_dict['models'], save_fname=args.save_filename)
 
-    uc = Finetuning(valid_gen)
+    uc = FinetuningXception(valid_gen)
 
     train_steps = args.train_steps or len(train_gen)
 
