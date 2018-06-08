@@ -12,5 +12,6 @@ setup(
     version=__version__,
     install_requires=[
           'keras',
+          'Pillow',
     ],
 )

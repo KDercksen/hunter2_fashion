@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from .constants import paths, GCP_paths
+from .constants import paths, GCP_paths, num_classes
 from .util import read_img
 from keras.utils import Sequence
+from tensorflow.python.lib.io import file_io
 from os.path import join
 import keras.backend as K
 import numpy as np
@@ -73,26 +74,24 @@ class SequenceFromGCP(Sequence):
         self.batch_size = batch_size
         self.img_size = img_size
         self.preprocessfunc = preprocessfunc
-        self.path = GCP_paths[mode]
-        self.root_dir = GCP_paths['data']
-        self.data = pd.DataFrame(columns=['id', 'labels', 'file'])
-        for _, _, fileList in os.walk(GCP_paths['data']):
-            for fname in fileList:
-                if not fname.endswith('.jpg'):
-                    continue
+        self.data = []
+        self.file_location = join(GCP_paths['data'], mode)
+        print('Loading data from {}'.format(self.file_location))
 
-                if self.mode != 'test':
-                    split = fname[0:-4].split('_')
-                    labels = split[3][1:-1].split(',')
-                    labels = list(map(int, labels))
-                    data.appends({'id': int(split[1]), 'labels': [labels], 'file': fname})
-                else:
-                    data.appends({'id': fname[0:-4], 'file': fname})
-
+        for fpath in file_io.get_matching_files(join(self.file_location, '*.jpg')):
+            fname = fpath.split('/')[-1]
+            if self.mode != 'test':
+                split = fname[0:-4].split('_')
+                labels = split[3][1:-1].split(',')
+                labels = list(map(int, labels))
+                self.data.append({'id': int(split[1]), 'labels': labels, 'file': fpath})
+            else:
+                self.data.append({'id': fname[0:-4], 'file': fpath})
+        self.data = pd.DataFrame(self.data, columns=['id', 'labels', 'file'])
         self.n_samples = len(self.data)
         self.n_batches = int(np.ceil(self.n_samples / self.batch_size))
 
-        print('SequenceFromGCP <{}>: {} samples'.format(mode, self.n_samples))
+        print('SequenceFromGCP <{}>: {} samples'.format(self.mode, self.n_samples))
 
     def __getitem__(self, idx):
         images = []
@@ -103,15 +102,18 @@ class SequenceFromGCP(Sequence):
         idxs = np.arange(start, end)
 
         for i in idxs:
-            try:
-                row = self.data.iloc[i, :]
-                img = read_img(row['file'], self.img_size)
-                images.append(img)
-                if self.mode != 'test':
-                    label = row['labels']
-                    labels.append(label)
-            except Exception as e:
-                print('Failed to read index {}'.format(i))
+            #try:
+            row = self.data.iloc[i, :]
+            img = read_img(row['file'], self.img_size, gcp=True)
+            images.append(img)
+            if self.mode != 'test':
+                label = row['labels']
+                label[:] = [i - 1 for i in label]
+                encoded = np.zeros(num_classes)
+                encoded[label] = 1
+                labels.append(encoded)
+            #except Exception as e:
+            #    print('Failed to read index {}'.format(i))
 
         images = np.stack(images).astype(K.floatx())
 
@@ -121,7 +123,7 @@ class SequenceFromGCP(Sequence):
         if self.mode == 'test':
             return images
         else:
-            return images, self.labels[idxs]
+            return images, np.array(labels)
 
     def __len__(self):
         return self.n_batches

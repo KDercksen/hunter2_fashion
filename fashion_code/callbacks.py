@@ -90,3 +90,25 @@ class F1Utility(Callback):
             }
             df_path = join('{}-scores.csv'.format(self.save_path))
             pd.DataFrame(scores, index=[0]).to_csv(df_path)
+
+
+class FinetuningXception(Callback):
+
+    def __init__(self, validation_generator):
+        super().__init__()
+
+    def on_train_begin(self, logs={}):
+        self.block_indices = []
+        for i, layer in enumerate(self.model.layers):
+            if layer.name[0:3] == 'add':
+                self.block_indices.append(i)
+        self.block_indices = self.block_indices[::-1]
+        self.current_index = 0
+
+    def on_epoch_end(self, epoch, logs={}):
+        if self.current_index < len(self.block_indices):
+            print('Unfreezing block {}...'.format(self.current_index))
+            for layer in self.model.layers[self.block_indices[self.current_index]:]:
+                layer.trainable = True
+            self.current_index += 1
+

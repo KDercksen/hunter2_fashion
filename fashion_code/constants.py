@@ -32,12 +32,9 @@ paths = {
 }
 
 GCP_paths = {
-    'data': 'gs://imaterialist_challenge_data',
-    'models': 'gs://hunter2_fashion/models',
-    'results': 'gs://hunter2_fashion/results',
-    'train': join(data_dir, 'train'),
-    'validation': join(data_dir, 'validation'),
-    'test':  join(data_dir, 'test'),
+    'data': 'gs://hunter2-project/imaterialist_challenge_data',
+    'models': 'gs://hunter2-project/models',
+    'results': 'gs://hunter2-project/results',
 }
 
 num_classes = 228
