@@ -18,6 +18,7 @@ from collections import defaultdict
 from io import StringIO
 from PIL import Image
 
+#choose which set of images will be "cropped"
 folder = 'train'
 LabelCounter = np.zeros(545, dtype=np.int64)
 row_counter = 0 
@@ -33,6 +34,8 @@ if os.path.isfile('./data/boundariesCroppedImages'+folder+'.csv'):
   startIndex = int((old_df.iloc[(row_counter-1)]['imageId' ]) +1)
   print('Csv file was successfully recovered.')
   print(old_df)
+else:
+  print('New DataFrame will be created...')
 print(startIndex)
 
 labelsCounterTxt = ''
@@ -65,14 +68,7 @@ category_index = label_map_util.create_category_index(categories)
 
 PATH_TO_TEST_IMAGES_DIR = './data/'+folder
 names = np.array([name.split('.jpg')[0] for name in os.listdir(PATH_TO_TEST_IMAGES_DIR) if os.path.isfile(os.path.join(PATH_TO_TEST_IMAGES_DIR, name))])
-for i in range(30, 40):
-  #print((str(i)+'.jpg') in names)
-  print( str(names[i])+'.jpg')
 names = np.sort(names.astype(int))
-for i in range(30, 40):
-  #print((str(i)+'.jpg') in names)
-  print( str(names[i])+'.jpg')
-
 
 #TEST_IMAGE_PATHS = [ os.path.join(PATH_TO_TEST_IMAGES_DIR, '{}.jpg'.format(i)) for i in range(1,len([name for name in os.listdir(PATH_TO_TEST_IMAGES_DIR) if os.path.isfile(os.path.join(PATH_TO_TEST_IMAGES_DIR, name))])+1) ]
 
@@ -198,75 +194,40 @@ for image_path in TEST_IMAGE_PATHS:
               minMaxCoordinates[i] = np.min(np.array(relevantOutPutBoxCoordinates)[:,i])
           else:
               minMaxCoordinates[i] = np.max(np.array(relevantOutPutBoxCoordinates)[:,i])
-    # Visualization of the results of a detection.
-    '''vis_util.visualize_boxes_and_labels_on_image_array(
-      image_np,
-      output_dict['detection_boxes'],
-      output_dict['detection_classes'],
-      output_dict['detection_scores'],
-      category_index,
-      instance_masks=output_dict.get('detection_masks'),
-      use_normalized_coordinates=True,
-      line_thickness=8)'''
+    
     cutImage = (load_image_into_numpy_array(image))
     if(np.count_nonzero(minMaxCoordinates) > 0):
       cutImage = cutImage[int(minMaxCoordinates[0]*cutImage.shape[0]):int(minMaxCoordinates[2]*cutImage.shape[0]), int(minMaxCoordinates[1]*cutImage.shape[1]):int(minMaxCoordinates[3]*cutImage.shape[1]), :]
       imageBoundaries = [int(minMaxCoordinates[0]*image_np.shape[0]), int(minMaxCoordinates[1]*image_np.shape[1]), int(minMaxCoordinates[2]*image_np.shape[0]), int(minMaxCoordinates[3]*image_np.shape[1])]
     else:
       imageBoundaries = [0, 0, image_np.shape[1],image_np.shape[0]]
-    print(output_dict['detection_boxes'])
-    print(image_np.shape)
-    print(imageBoundaries)
-    print(minMaxCoordinates)
+    
     result = Image.fromarray(cutImage)
-    result.save('./data/detected'+image_path.split('./data/'+folder)[1])
-    print('saved'+ ('./data/detected'+image_path.split('./data/'+folder)[1]))
-    print((image_path.split('./data/'+folder)[1]), ((image_path.split('./data/'+folder)[0])))
+    #result.save('./data/detected'+image_path.split('./data/'+folder)[1])
+    #print('saved'+ ('./data/detected'+image_path.split('./data/'+folder)[1]))
+    #print((image_path.split('./data/'+folder)[1]), ((image_path.split('./data/'+folder)[0])))
     imageId = ((image_path.split('./data/'+folder)[1]).replace("\\", ""))
     imageId = (imageId.replace(".jpg", ""))
-    print(imageId)
+    #print(imageId)
     imageIndex[counter] = int(imageId)
     boundaries[counter] = imageBoundaries
     ClassPercentage = ''
     currentCounter = np.zeros(545, dtype=np.int64)
-    print((len(output_dict['detection_scores'])))
-    for i in range(len(output_dict['detection_scores'])):
-        if output_dict['detection_scores'][i] >= 0.1:
-            ClassPercentage += (str(categories[output_dict['detection_classes'][i]-1]['name']) + 
-                            '('+str(categories[output_dict['detection_classes'][i]-1]['id'])+')'+ 
-                            ': '+ str(output_dict['detection_scores'][i]) + '\n')
-            if(currentCounter[categories[output_dict['detection_classes'][i]-1]['id']] == 0):
-                LabelCounter[categories[output_dict['detection_classes'][i]-1]['id']] += 1 
-                currentCounter[categories[output_dict['detection_classes'][i]-1]['id']] = 1
-    print(ClassPercentage)
     
-    
-    text_file = open( ( './data/detected'+image_path.split('./data/'+folder)[1]).split('.jpg')[0]+'.txt', "w")
-    text_file.write(ClassPercentage)
-    text_file.close()
-    writeCountedLabelsToFile()
-    '''if(flag == 1):
-      print(boundaries)
-      print(boundaries[counter])
-      df = pd.DataFrame(boundaries[counter].reshape(-1, len(boundaries[counter])), columns=['yMin', 'xMin', 'yMax  ', 'xMax'])
-      print(df)
-    else:'''
     df = pd.DataFrame(boundaries, columns=['yMin', 'xMin', 'yMax  ', 'xMax'])
-    print (df)
-
     dfImageLabel = pd.DataFrame(imageIndex, columns=['imageId'])
-
-    print(dfImageLabel)
 
     current = pd.concat([dfImageLabel,df], axis=1)
     if(flag == 1):
       old_df_updated = old_df.append(current, ignore_index=True)
-      print(old_df_updated)
+      print('Finished image ' + imageId+ '.')
+      print(boundaries[counter])
       old_df_updated.to_csv(os.path.join('./data', 'boundariesCroppedImages'+folder+'.csv'))
-      
     else: 
       current.to_csv(os.path.join('./data', 'boundariesCroppedImages'+folder+'.csv'))
-      print(current)
+      #print(current)
+      print('Finished image ' + imageId+ '.')
+      print(boundaries[counter])
     counter += 1
     
 
