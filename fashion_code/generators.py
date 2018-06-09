@@ -102,18 +102,18 @@ class SequenceFromGCP(Sequence):
         idxs = np.arange(start, end)
 
         for i in idxs:
-            #try:
-            row = self.data.iloc[i, :]
-            img = read_img(row['file'], self.img_size, gcp=True)
-            images.append(img)
-            if self.mode != 'test':
-                label = row['labels']
-                label[:] = [i - 1 for i in label]
-                encoded = np.zeros(num_classes)
-                encoded[label] = 1
-                labels.append(encoded)
-            #except Exception as e:
-            #    print('Failed to read index {}'.format(i))
+            try:
+                row = self.data.iloc[i, :]
+                img = read_img(row['file'], self.img_size, gcp=True)
+                images.append(img)
+                if self.mode != 'test':
+                    label = row['labels']
+                    label[:] = [i - 1 for i in label]
+                    encoded = np.zeros(num_classes)
+                    encoded[label] = 1
+                    labels.append(encoded)
+            except Exception as e:
+                print('Failed to read index {}'.format(i))
 
         images = np.stack(images).astype(K.floatx())
 

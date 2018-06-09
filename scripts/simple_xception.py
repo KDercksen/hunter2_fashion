@@ -6,6 +6,7 @@ from fashion_code.callbacks import F1Utility, FinetuningXception
 from fashion_code.constants import num_classes, paths, GCP_paths
 from fashion_code.generators import SequenceFromDisk, SequenceFromGCP
 from keras.applications.xception import Xception, preprocess_input
+from keras.utils.training_utils import multi_gpu_model
 from keras.callbacks import ModelCheckpoint
 from keras.layers import Dense
 from keras.models import Model, load_model
@@ -30,7 +31,7 @@ def build_model(num_classes):
 
 def train_model(args):
     # Some variables
-    batch_size = args.batch_size
+    batch_size = args.batch_size * args.gpus
     chpt = args.continue_from_chpt
     epochs = args.epochs
     img_size = (299, 299)
@@ -48,6 +49,8 @@ def train_model(args):
         model = load_model(join(paths['models'], chpt))
     else:
         model = build_model(num_classes)
+        if args.gpus > 1:
+            model = multi_gpu_model(model, args.gpus)
         model.compile(optimizer=optimizer, loss=loss)
 
     # Create data generators
@@ -88,7 +91,7 @@ def train_model(args):
                         workers=workers,
                         # This callback does validation, checkpointing and
                         # submission creation
-                        callbacks=[pm,uc],
+                        callbacks=[mc,uc],
                         verbose=1)
 
 
@@ -115,6 +118,8 @@ if __name__ == '__main__':
                    help='Change file loading for Google Cloud Platform')
     p.add_argument('--job-dir', type=str, help='Location of the job directory '
                                                'for the current GCP job')
+    p.add_argument('--gpus', type=int, default=1,
+                   help='Number of GPUs used for training')
     args = p.parse_args()
 
     train_model(args)
