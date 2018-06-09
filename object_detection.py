@@ -12,12 +12,29 @@ import sys
 import tarfile
 import tensorflow as tf
 import zipfile
+import pandas as pd
 
 from collections import defaultdict
 from io import StringIO
 from PIL import Image
 
+folder = 'train'
 LabelCounter = np.zeros(545, dtype=np.int64)
+row_counter = 0 
+startIndex = 1
+flag = 0
+if os.path.isfile('./data/boundariesCroppedImages'+folder+'.csv'):
+  print('Recovering previous csv file...')
+  flag = 1
+  old_df = pd.read_csv('./data/boundariesCroppedImages'+folder+'.csv', index_col = 0)
+  old_df = old_df[(old_df.T != 0).any()]
+  row_counter = old_df[(old_df.T != 0).any()].shape[0]
+  #sets start index to last imageId + 1
+  startIndex = int((old_df.iloc[(row_counter-1)]['imageId' ]) +1)
+  print('Csv file was successfully recovered.')
+  print(old_df)
+print(startIndex)
+
 labelsCounterTxt = ''
 
 whiteListLabels = [1,2,3,4, 7, 11, 12, 21, 22, 24, 25, 28, 29, 33, 39, 56, 60, 68, 72, 73, 90, 95, 96, 99, 121, 28, 130, 133, 145, 168, 179, 183, 186, 203, 207, 212, 224, 230, 254, 284, 319, 322, 327, 364, 438, 440, 530]
@@ -46,12 +63,30 @@ categories = label_map_util.convert_label_map_to_categories(label_map, max_num_c
 category_index = label_map_util.create_category_index(categories)  
 
 
-PATH_TO_TEST_IMAGES_DIR = './data/validation'
-#TEST_IMAGE_PATHS = [ os.path.join(PATH_TO_TEST_IMAGES_DIR, '{}.jpg'.format(i)) for i in range(0,len([name for name in os.listdir(PATH_TO_TEST_IMAGES_DIR) if os.path.isfile(os.path.join(PATH_TO_TEST_IMAGES_DIR, name))])+1) ]
-TEST_IMAGE_PATHS = [ os.path.join(PATH_TO_TEST_IMAGES_DIR, '{}.jpg'.format(i)) for i in range(6,9880) ]
-for i in range (0, len(TEST_IMAGE_PATHS)):
-    print(TEST_IMAGE_PATHS[i])
+PATH_TO_TEST_IMAGES_DIR = './data/'+folder
+names = np.array([name.split('.jpg')[0] for name in os.listdir(PATH_TO_TEST_IMAGES_DIR) if os.path.isfile(os.path.join(PATH_TO_TEST_IMAGES_DIR, name))])
+for i in range(30, 40):
+  #print((str(i)+'.jpg') in names)
+  print( str(names[i])+'.jpg')
+names = np.sort(names.astype(int))
+for i in range(30, 40):
+  #print((str(i)+'.jpg') in names)
+  print( str(names[i])+'.jpg')
 
+
+#TEST_IMAGE_PATHS = [ os.path.join(PATH_TO_TEST_IMAGES_DIR, '{}.jpg'.format(i)) for i in range(1,len([name for name in os.listdir(PATH_TO_TEST_IMAGES_DIR) if os.path.isfile(os.path.join(PATH_TO_TEST_IMAGES_DIR, name))])+1) ]
+
+start, = np.where(names == startIndex)
+while(len(start) == 0):
+  print('Searching for valid image name index: '+str(startIndex)+'...')
+  startIndex += 1
+  start, = np.where(names == startIndex)
+print(start)
+TEST_IMAGE_PATHS = [ os.path.join(PATH_TO_TEST_IMAGES_DIR, '{}.jpg'.format(name)) for name in names[start[0]:] ]
+
+'''for i in range (0, len(TEST_IMAGE_PATHS)):
+    print(TEST_IMAGE_PATHS[i])
+'''
 # Size, in inches, of the output images.
 #IMAGE_SIZE = (12, 8)
 
@@ -66,7 +101,7 @@ def writeCountedLabelsToFile():
 
 
 
-def filterDictionary():
+def filterDictionary(output_dict):
     new_num_detec = output_dict['num_detections']
     for i in range(0, output_dict['num_detections']):
         
@@ -76,6 +111,7 @@ def filterDictionary():
             output_dict['detection_boxes'] = np.delete(output_dict['detection_boxes'],(i),0)
             new_num_detec -= 1
     output_dict['num_detections'] = new_num_detec;
+    return output_dict
 
 def detect_object(image):
 
@@ -129,6 +165,19 @@ def detect_object(image):
             output_dict['detection_masks'] = output_dict['detection_masks'][0]
     return output_dict
 
+imageIndex = np.zeros(shape =len(TEST_IMAGE_PATHS))
+boundaries = np.zeros(shape = (len(TEST_IMAGE_PATHS), 4))
+
+counter = 0
+
+
+# else:
+#   df = pd.DataFrame(boundaries, columns=['yMin', 'xMin', 'yMax  ', 'xMax'])
+#   print(df)
+#   dfImageLabel = pd.DataFrame(imageIndex[(startIndex-1):], columns=['imageId'])
+#   print(dfImageLabel)
+#   result = pd.concat([dfImageLabel,df], axis=1)
+print('checked')
 for image_path in TEST_IMAGE_PATHS:
     image = Image.open(image_path)
     # the array based representation of the image will be used later in order to prepare the
@@ -139,18 +188,18 @@ for image_path in TEST_IMAGE_PATHS:
     # Actual detection.
     output_dict = detect_object(image_np)
     #Takes out labels that are not in whitelist.
-    filterDictionary()
+    output_dict = filterDictionary(output_dict)
     
     relevantOutPutBoxCoordinates = [coordinates for coordinates in output_dict['detection_boxes'] if (np.count_nonzero(coordinates) > 0)]
     minMaxCoordinates = np.zeros(4)
-    
-    for i in range(0, 4):
-        if(i < 2):
-            minMaxCoordinates[i] = np.min(np.array(relevantOutPutBoxCoordinates)[:,i])
-        else:
-            minMaxCoordinates[i] = np.max(np.array(relevantOutPutBoxCoordinates)[:,i])
+    if(len(relevantOutPutBoxCoordinates)>0):
+      for i in range(0, 4):
+          if(i < 2):
+              minMaxCoordinates[i] = np.min(np.array(relevantOutPutBoxCoordinates)[:,i])
+          else:
+              minMaxCoordinates[i] = np.max(np.array(relevantOutPutBoxCoordinates)[:,i])
     # Visualization of the results of a detection.
-    vis_util.visualize_boxes_and_labels_on_image_array(
+    '''vis_util.visualize_boxes_and_labels_on_image_array(
       image_np,
       output_dict['detection_boxes'],
       output_dict['detection_classes'],
@@ -158,12 +207,26 @@ for image_path in TEST_IMAGE_PATHS:
       category_index,
       instance_masks=output_dict.get('detection_masks'),
       use_normalized_coordinates=True,
-      line_thickness=8)
+      line_thickness=8)'''
     cutImage = (load_image_into_numpy_array(image))
-    cutImage = cutImage[int(minMaxCoordinates[0]*cutImage.shape[0]):int(minMaxCoordinates[2]*cutImage.shape[0]), int(minMaxCoordinates[1]*cutImage.shape[1]):int(minMaxCoordinates[3]*cutImage.shape[1]), :]
+    if(np.count_nonzero(minMaxCoordinates) > 0):
+      cutImage = cutImage[int(minMaxCoordinates[0]*cutImage.shape[0]):int(minMaxCoordinates[2]*cutImage.shape[0]), int(minMaxCoordinates[1]*cutImage.shape[1]):int(minMaxCoordinates[3]*cutImage.shape[1]), :]
+      imageBoundaries = [int(minMaxCoordinates[0]*image_np.shape[0]), int(minMaxCoordinates[1]*image_np.shape[1]), int(minMaxCoordinates[2]*image_np.shape[0]), int(minMaxCoordinates[3]*image_np.shape[1])]
+    else:
+      imageBoundaries = [0, 0, image_np.shape[1],image_np.shape[0]]
+    print(output_dict['detection_boxes'])
+    print(image_np.shape)
+    print(imageBoundaries)
+    print(minMaxCoordinates)
     result = Image.fromarray(cutImage)
-    result.save('./data/detected'+image_path.split('./data/validation')[1])
-    print('saved'+ ('./data/detected'+image_path.split('./data/validation')[1]))
+    result.save('./data/detected'+image_path.split('./data/'+folder)[1])
+    print('saved'+ ('./data/detected'+image_path.split('./data/'+folder)[1]))
+    print((image_path.split('./data/'+folder)[1]), ((image_path.split('./data/'+folder)[0])))
+    imageId = ((image_path.split('./data/'+folder)[1]).replace("\\", ""))
+    imageId = (imageId.replace(".jpg", ""))
+    print(imageId)
+    imageIndex[counter] = int(imageId)
+    boundaries[counter] = imageBoundaries
     ClassPercentage = ''
     currentCounter = np.zeros(545, dtype=np.int64)
     print((len(output_dict['detection_scores'])))
@@ -176,14 +239,50 @@ for image_path in TEST_IMAGE_PATHS:
                 LabelCounter[categories[output_dict['detection_classes'][i]-1]['id']] += 1 
                 currentCounter[categories[output_dict['detection_classes'][i]-1]['id']] = 1
     print(ClassPercentage)
-
     
-    text_file = open( ( './data/detected'+image_path.split('./data/validation')[1]).split('.jpg')[0]+'.txt', "w")
+    
+    text_file = open( ( './data/detected'+image_path.split('./data/'+folder)[1]).split('.jpg')[0]+'.txt', "w")
     text_file.write(ClassPercentage)
     text_file.close()
     writeCountedLabelsToFile()
+    '''if(flag == 1):
+      print(boundaries)
+      print(boundaries[counter])
+      df = pd.DataFrame(boundaries[counter].reshape(-1, len(boundaries[counter])), columns=['yMin', 'xMin', 'yMax  ', 'xMax'])
+      print(df)
+    else:'''
+    df = pd.DataFrame(boundaries, columns=['yMin', 'xMin', 'yMax  ', 'xMax'])
+    print (df)
+
+    dfImageLabel = pd.DataFrame(imageIndex, columns=['imageId'])
+
+    print(dfImageLabel)
+
+    current = pd.concat([dfImageLabel,df], axis=1)
+    if(flag == 1):
+      old_df_updated = old_df.append(current, ignore_index=True)
+      print(old_df_updated)
+      old_df_updated.to_csv(os.path.join('./data', 'boundariesCroppedImages'+folder+'.csv'))
+      
+    else: 
+      current.to_csv(os.path.join('./data', 'boundariesCroppedImages'+folder+'.csv'))
+      print(current)
+    counter += 1
+    
+
+    
+
+print(imageIndex)
+print(boundaries)
+#d = {'xMin' : pd.Series(boundaries[:][0], index=imageIndex)}
+#test_merge = pd.DataFrame(test['images'])
 
 
+
+
+
+
+#print(df)
 
 
 
