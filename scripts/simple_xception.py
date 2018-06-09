@@ -88,7 +88,7 @@ def train_model(args):
                         workers=workers,
                         # This callback does validation, checkpointing and
                         # submission creation
-                        callbacks=[pm,uc],
+                        callbacks=[mc,uc],
                         verbose=1)
 
 
