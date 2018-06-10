@@ -58,8 +58,10 @@ INPUT_SIZE = 299
 n_pre_epochs = 10
 num_epochs = 100
 batch_size = 32
-n_images = 100 
+n_images = 100
 
+#Number of cross validation folds 
+NUMFOLD =5
 
 # CHANGE INPUT IMG SIZES LATER!
 # Load data from sequencefromDiks 
@@ -83,7 +85,7 @@ x_train, x_test, y_train, y_test = train_test_split(x_train, y_train, test_size=
 
 
 #This creates k fold validation indices
-kf = KFold(n_splits=5, random_state=None, shuffle=False)
+kf = KFold(n_splits=NUMFOLD, random_state=None, shuffle=False)
 # returns the number of splitting iterations in the cross-validator
 kf.get_n_splits(x_train) 
 
@@ -171,10 +173,10 @@ for train_index, test_index in kf.split(x_train):
             train_index)
     np.save(join(paths['models'],'testind_fold_{}'.format(i)),
             test_index)    
-	np.save(join(paths['models'],'holdout_data_x'),
-            x_test) 
-	np.save(join(paths['models'],'holdout_data_y'),
-            y_test) 
+    np.save(join(paths['models'],'holdout_data_x'),
+             x_test) 
+    np.save(join(paths['models'],'holdout_data_y'),
+             y_test) 
         
     i = i + 1
         
