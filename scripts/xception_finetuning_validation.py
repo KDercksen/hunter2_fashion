@@ -73,7 +73,7 @@ def train_model(args):
 
     # Fit model
     save_file = join(paths['models'], args.save_filename)
-    mc = ModelCheckpoint(save_file, monitor='val_loss', save_best_only=True)
+    mc = ModelCheckpoint(save_file, monitor='loss', save_best_only=True)
 
     uc = FinetuningXception()
 
@@ -82,7 +82,6 @@ def train_model(args):
     model.fit_generator(train_gen,
                         epochs=epochs,
                         steps_per_epoch=train_steps,
-                        validation_split=0.05,
                         use_multiprocessing=use_multiprocessing,
                         workers=workers,
                         # This callback does validation, checkpointing and
