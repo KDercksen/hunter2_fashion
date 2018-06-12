@@ -54,13 +54,16 @@ categories, probabilities = [], []
 PATH_TO_CKPT = './faster_rcnn_inception_resnet_v2_atrous_oid_2018_01_28/frozen_inference_graph.pb'
 PATH_TO_LABELS = './object_detection/oid_bbox_trainable_label_map.pbtxt'
 #PATH_TO_LABELS = 'mscoco_label_map.pbtxt'
-detection_graph = tf.Graph()
-with detection_graph.as_default():
-    od_graph_def = tf.GraphDef()
-    with tf.gfile.GFile(PATH_TO_CKPT, 'rb') as fid:
-        serialized_graph = fid.read()
-        od_graph_def.ParseFromString(serialized_graph)
-        tf.import_graph_def(od_graph_def, name='')
+with tf.device("/device:GPU:0"):
+    detection_graph = tf.Graph()
+    with detection_graph.as_default():
+        od_graph_def = tf.GraphDef()
+        with tf.gfile.GFile(PATH_TO_CKPT, 'rb') as fid:
+            serialized_graph = fid.read()
+            od_graph_def.ParseFromString(serialized_graph)
+            tf.import_graph_def(od_graph_def, name='')
+
+
 
 
 label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
