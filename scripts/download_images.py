@@ -31,7 +31,7 @@ def parse_dataset(dataset, outdir):
         data = json.load(f)
         for image in data['images']:
             url = image['url']
-            fname = os.path.join(outdir, f'{image["imageId"]}.jpg')
+            fname = os.path.join(outdir, '{}.jpg'.format(image["imageId"]))
             infos.append((fname, url))
     return infos
 

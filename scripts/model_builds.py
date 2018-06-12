@@ -130,11 +130,11 @@ if __name__ == '__main__':
     
     
     for net in networks.keys():
-        NetworkConstr = networks[f'{net}'][1]
-        preprocess_fun = networks[f'{net}'][0].preprocess_input
-        args.save_filename = f'{net}'
+        NetworkConstr = networks[net][1]
+        preprocess_fun = networks[net][0].preprocess_input
+        args.save_filename = net
         print(args.save_filename)
-        train_model(NetworkConstr,preprocess_fun,args)
+        train_model(NetworkConstr, preprocess_fun, args)
 
     sys.exit(0)    
 
