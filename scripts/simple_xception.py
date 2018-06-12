@@ -46,7 +46,7 @@ def train_model(args):
 
     # Create and compile model
     if chpt:
-        model = load_model(join(paths['models'], chpt))
+        model = load_model(join(path_dict['models'], chpt))
     else:
         model = build_model(num_classes)
         if args.gpus > 1:
@@ -76,7 +76,7 @@ def train_model(args):
             test_gen = None
 
     # Fit model
-    save_file = join(paths['models'], args.save_filename)
+    save_file = join(path_dict['models'], args.save_filename)
     mc = ModelCheckpoint(save_file, monitor='val_loss', save_best_only=True)
 
     uc = FinetuningXception()
