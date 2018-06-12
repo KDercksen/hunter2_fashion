@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 from fashion_code.callbacks import F1Utility, FinetuningXception
 from fashion_code.constants import num_classes, paths, GCP_paths
 from fashion_code.generators import SequenceFromDisk, SequenceFromGCP
+from fashion_code.util import create_submission
 from keras.applications.xception import Xception, preprocess_input
 from keras.utils.training_utils import multi_gpu_model
 from keras.callbacks import ModelCheckpoint
@@ -86,8 +87,11 @@ def train_model(args):
                         workers=workers,
                         # This callback does validation, checkpointing and
                         # submission creation
-                        callbacks=[mc,uc],
+                        callbacks=[uc],
                         verbose=1)
+
+    preds = model.predict_generator(test_gen)
+    create_submission(preds, args.save_filename)
 
 
 if __name__ == '__main__':
