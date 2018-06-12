@@ -55,10 +55,8 @@ class SequenceFromDisk(Sequence):
         end = np.min([start + self.batch_size, self.n_samples])
         idxs = np.arange(start, end)
 
-        print (idxs.shape)
 
         for i in idxs:
-            print (i, start, end)
             try:
                 row = self.csv.iloc[i, :]
                 croppedCoordinates = self.croppedCoordinatesCsv.iloc[i]
@@ -72,10 +70,11 @@ class SequenceFromDisk(Sequence):
                 yMin, xMin, yMax, xMax = croppedCoordinates[2], croppedCoordinates[3], croppedCoordinates[4], croppedCoordinates[5]
                 #print(yMin, xMin, yMax, xMax)
 
+                
                 croppedImage = croppedImage[int(yMin):int(yMax), int(xMin):int(xMax), :]
+                result = Image.fromarray(croppedImage)
                 resized = result.resize(self.img_size, Image.ANTIALIAS)
-                print(resized.size)
-                resized.save('./data/'+str(int(croppedCoordinates[1]))+'.jpg')
+                #resized.save('./data/'+str(int(croppedCoordinates[1]))+'.jpg')
                 
                 images.append(resized)
             except Exception as e:

@@ -19,9 +19,12 @@ from io import StringIO
 from PIL import Image
 
 #choose which set of images will be "cropped"
-folder = 'train'
+folder = 'validation'
 LabelCounter = np.zeros(545, dtype=np.int64)
 row_counter = 0 
+#StartIndex defines which imageId to start from
+#however, if there is already a csv file, it will continue from where it stopped
+#If you don't want that, either rename the csv file or remove the line : startIndex = int((old_df.iloc[(row_counter-1)]['imageId' ]) +1).
 startIndex = 1
 flag = 0
 if os.path.isfile('./data/boundariesCroppedImages'+folder+'.csv'):
