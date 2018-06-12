@@ -29,6 +29,9 @@ paths = {
     'dummy': {
         'csv': join(data_dir, 'dummy_label_col.csv'),
     },
+    'cropped': {
+        'csv': join(data_dir, 'boundariesCroppedImagesvalidation.csv'),
+    },
 }
 
 GCP_paths = {
