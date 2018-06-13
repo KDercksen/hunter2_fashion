@@ -98,7 +98,7 @@ class Finetuning(Callback):
         super().__init__(block_indices)
         self.block_indices = block_indices
 
-    def on_train_begin(self, , logs={}):
+    def on_train_begin(self, logs={}):
         self.current_index = 0
 
     def on_epoch_end(self, epoch, logs={}):
