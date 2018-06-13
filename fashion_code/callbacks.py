@@ -92,17 +92,13 @@ class F1Utility(Callback):
             pd.DataFrame(scores, index=[0]).to_csv(df_path)
 
 
-class FinetuningXception(Callback):
+class Finetuning(Callback):
 
     def __init__(self):
         super().__init__()
 
-    def on_train_begin(self, logs={}):
-        self.block_indices = []
-        for i, layer in enumerate(self.model.layers):
-            if layer.name[0:3] == 'add':
-                self.block_indices.append(i)
-        self.block_indices = self.block_indices[::-1]
+    def on_train_begin(self, block_indices, logs={}):
+        self.block_indices = block_indices
         self.current_index = 0
 
     def on_epoch_end(self, epoch, logs={}):

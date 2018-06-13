@@ -76,7 +76,13 @@ def train_model(args):
     save_file = join(paths['models'], args.save_filename)
     mc = ModelCheckpoint(save_file, monitor='loss', save_best_only=True)
 
-    uc = FinetuningXception()
+    block_indices = []
+    for i, layer in enumerate(model.layers):
+        if layer.name[0:3] == 'add':
+            block_indices.append(i)
+    block_indices = block_indices[::-1]
+
+    uc = FinetuningXception(block_indices)
 
     train_steps = args.train_steps or len(train_gen)
 
@@ -89,9 +95,6 @@ def train_model(args):
                         # submission creation
                         callbacks=[uc, mc],
                         verbose=1)
-
-    preds = model.predict_generator(test_gen)
-    create_submission(preds, args.save_filename)
 
 
 if __name__ == '__main__':
