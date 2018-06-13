@@ -51,7 +51,7 @@ def train_model(args):
         model = build_model(num_classes)
         if args.gpus > 1:
             model = multi_gpu_model(model, args.gpus)
-        model.compile(optimizer=optimizer, loss=loss)
+    model.compile(optimizer=optimizer, loss=loss)
 
     # Create data generators
     if args.gcp:
