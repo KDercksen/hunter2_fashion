@@ -12,6 +12,7 @@ from sklearn.metrics import (f1_score,
 from sklearn.preprocessing import MultiLabelBinarizer
 import numpy as np
 import pandas as pd
+import keras.backend as K
 
 
 class F1Utility(Callback):
@@ -94,9 +95,10 @@ class F1Utility(Callback):
 
 class Finetuning(Callback):
 
-    def __init__(self, block_indices):
+    def __init__(self, block_indices, lr_reduction):
         super().__init__()
         self.block_indices = block_indices
+        self.lr_reduction = lr_reduction
 
     def on_train_begin(self, logs={}):
         self.current_index = 0
@@ -106,8 +108,8 @@ class Finetuning(Callback):
             print('Unfreezing block {}...'.format(self.current_index))
             for layer in self.model.layers[self.block_indices[self.current_index]:]:
                 layer.trainable = True
-            self.model.optimizer.lr = 0.3 * self.model.optimizer.lr #1/3rd because lr diminishes over 10 epochs
-            print('Learning rate = {}'.format(self.model.optimizer.lr))
+            self.model.optimizer.lr = self.lr_reduction * self.model.optimizer.lr #1/3rd because lr diminishes over 10 epochs
+            print('Learning rate = {}'.format(K.eval(self.model.optimizer.lr)))
             self.current_index += 1
 
 

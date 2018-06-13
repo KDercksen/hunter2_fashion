@@ -82,7 +82,7 @@ def train_model(args):
             block_indices.append(i)
     block_indices = block_indices[::-1]
 
-    uc = Finetuning(block_indices)
+    uc = Finetuning(block_indices, 0.5)
 
     train_steps = args.train_steps or len(train_gen)
 
