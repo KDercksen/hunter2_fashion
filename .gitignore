@@ -78,6 +78,10 @@ target/
 # celery beat schedule file
 celerybeat-schedule
 
+#Protoc
+Protoc/
+
+
 # SageMath parsed files
 *.sage.py
 
@@ -89,6 +93,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+windows_env/
+
 
 # Spyder project settings
 .spyderproject
