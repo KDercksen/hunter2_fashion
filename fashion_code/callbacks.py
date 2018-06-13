@@ -94,8 +94,8 @@ class F1Utility(Callback):
 
 class Finetuning(Callback):
 
-    def __init__(self):
-        super().__init__(block_indices)
+    def __init__(self, block_indices):
+        super().__init__()
         self.block_indices = block_indices
 
     def on_train_begin(self, logs={}):
