@@ -87,7 +87,7 @@ def train_model(args):
                         workers=workers,
                         # This callback does validation, checkpointing and
                         # submission creation
-                        callbacks=[uc],
+                        callbacks=[uc, mc],
                         verbose=1)
 
     preds = model.predict_generator(test_gen)
