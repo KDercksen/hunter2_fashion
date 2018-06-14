@@ -25,7 +25,7 @@ def read_img(fname, size, gcp=False):
 
 
 def create_submission(y_pred, filename):
-        preds = y_pred > .5
+        preds = y_pred > .2
         classes = pd.read_csv(paths['dummy']['csv'])
 
         print('Converting labels...')

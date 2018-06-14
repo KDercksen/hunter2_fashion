@@ -3,88 +3,47 @@
 Subject: Sumission file for stacking models
 """
 
-import sys
-sys.path.append('../hunter2_fashion/scripts')
-from os.path import join
-import numpy as np
-from tqdm import tqdm
+from fashion_code.constants import paths
+from fashion_code.generators import SequenceFromDisk
 from fashion_code.util import create_submission
-from model_builds import networks
-from fashion_code.constants import paths, GCP_paths
-from fashion_code.generators import SequenceFromDisk, SequenceFromGCP
 from keras.applications.xception import preprocess_input
 from keras.models import load_model
+import keras.backend as K
+import numpy as np
 
 
-'''
-    TODO:
-        1. paste/append the predictions of each individual model
-            together and to a format the second CNN can read
-        2. Make predictions for the second CNN file
-        3. Save predictions into CSV file
-        
-        
-'''
+net_filenames = [
+    'models/densenet201_val.h5',
+    'models/inceptionresnetv2_val.h5',
+    'models/inceptionv3_val.h5',
+    'models/resnet50_val.h5',
+    'models/xception_val.h5',
+]
 
-NUMFOLD = 5
+cnn_filename = 'models/cnn_transformer.h5'
 
-# =============================================================================
-# Load test data
-# =============================================================================
+print('Creating test generator...')
+test_gen = SequenceFromDisk('test', 128, (299, 299), preprocess_input)
 
-val_gen = SequenceFromDisk('test',128, (200,200),preprocess_input)
+print('Running predictions...')
+preds = []
+for net in net_filenames:
+    model = load_model(net)
+    p = model.predict_generator(test_gen,
+                                use_multiprocessing=True,
+                                workers=8,
+                                verbose=1)
+    preds.append(p)
+    K.clear_session()
 
-#get all the data from the val sfd constructor
-x_test = np.concatenate([val_gen[i][0] for i in tqdm(range(len(val_gen)))])
+preds = np.stack(preds, axis=-1)
+print(preds.shape)
+np.save('results/stack_preds.npy', preds)
 
+print('Transforming predictions...')
+cnn_model = load_model(cnn_filename)
+preds = cnn_model.predict(preds, batch_size=64, verbose=1)
 
-#
-#One by one, load trained models and create predictions
-
-
-# =============================================================================
-# Load first stack models (CNN's)
-# =============================================================================
-#Loading xception,inception,resnet,densenet,inceptionresenet
-
-'''
-gcp IS false change later!!!
-'''
-gcp = False
-
-
-for net in networks.keys():
-    for fold in range(0,NUMFOLD):
-        print('loading model {} for fold {}'.format(net,fold + 1))
-        
-        
-        '''
-        load model have incorrect folder specifications for gcp!!!
-        REVIEW THIS
-        '''
-        
-        
-        #Load the trained network from model_build
-        if gcp:
-            path_dict = GCP_paths
-        else:
-            path_dict = paths
-        
-        #Load model and make predictions on test set
-        model = load_model(join(paths['models'],'{}_fold_{}'.format(net,fold)))  
-        preds = model.predict(x_test)
-        
-        ''' APPEND THE PREDICTIONS OF MODEL 1 TO THE NEXT'''
-        
-        '''APPENDING CODE HERE'''
-
-
-
-
-
-
-
-filename = 'enterFILENAMEHERE'
-secondCNNpred= 2 
-
-create_submission(secondCNNpred, filename)
+print('Creating submission...')
+create_submission(preds, 'cnn_stack')
+print('Done!')

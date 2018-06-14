@@ -15,6 +15,25 @@ import pandas as pd
 import keras.backend as K
 
 
+class MultiGPUCheckpoint(Callback):
+
+    def __init__(self, filename, monitor='val_loss', verbose=0):
+        super().__init__()
+        self.filename = filename
+        self.verbose = verbose
+        self.val_accs = []
+        self.monitor = monitor
+
+    def on_epoch_end(self, epoch, logs=None):
+        if not self.val_accs:
+            self.model.layers[-2].save(self.filename)
+        elif logs[self.monitor] < min(self.val_accs):
+            if self.verbose > 0:
+                print('Saving to {}'.format(self.filename))
+            self.model.layers[-2].save(self.filename)
+        self.val_accs.append(logs[self.monitor])
+
+
 class F1Utility(Callback):
 
     def __init__(self, validation_generator, test_generator=None,

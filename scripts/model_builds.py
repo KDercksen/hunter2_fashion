@@ -1,19 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
+from argparse import ArgumentParser
+from fashion_code.constants import num_classes, paths, GCP_paths
+from fashion_code.callbacks import MultiGPUCheckpoint
+from fashion_code.generators import SequenceFromDisk, SequenceFromGCP
 from keras.applications import (xception,
                                 inception_v3,
                                 resnet50,
                                 inception_resnet_v2,
                                 densenet)
-from keras.layers import Dense
-from argparse import ArgumentParser
-import sys
-from fashion_code.callbacks import F1Utility
-from fashion_code.constants import num_classes, paths, GCP_paths
-from fashion_code.generators import SequenceFromDisk, SequenceFromGCP
+from keras.callbacks import ModelCheckpoint
+from keras.layers import Dense, Dropout
 from keras.models import Model, load_model
 from keras.optimizers import Adam
+from keras.utils import multi_gpu_model
 from os.path import join
+import sys
+import keras.backend as K
+import numpy as np
 
 
 # Maps network names to module, constructor, input size
@@ -26,12 +31,14 @@ networks = {
 }
 
 
-#Right now these models are all pretrained and not finetuned.
-#For this matter, they all even have the same top layers. 
 def build_model(NetworkConstr, num_classes):
-    base_model = NetworkConstr(weights='imagenet', pooling='avg', include_top=False)
+    base_model = NetworkConstr(weights='imagenet', pooling='avg',
+                               input_shape=(299, 299, 3), include_top=False)
     x = base_model.output
     x = Dense(2048, activation='relu', kernel_initializer='he_normal')(x)
+    x = Dropout(.5)(x)
+    x = Dense(1024, activation='relu', kernel_initializer='he_normal')(x)
+    x = Dropout(.5)(x)
     predictions = Dense(num_classes, activation='sigmoid',
                         kernel_initializer='he_normal')(x)
     model = Model(base_model.inputs, predictions)
@@ -39,17 +46,17 @@ def build_model(NetworkConstr, num_classes):
     for layer in base_model.layers:
         layer.trainable = False
 
-    return model 
-    
-def train_model(NetworkConstr,preprocess_fun ,args):
-      
+    return model
+
+
+def train_model(NetworkConstr, aug_fun, preprocess_fun, args):
     # Some variables
     batch_size = args.batch_size
     chpt = args.continue_from_chpt
     epochs = args.epochs
     img_size = (299, 299)
     loss = 'binary_crossentropy'
-    optimizer = Adam(decay=1e-6)
+    optimizer = Adam()
     use_multiprocessing = not args.windows
     workers = 0 if args.windows else 8
     if args.gcp:
@@ -59,9 +66,11 @@ def train_model(NetworkConstr,preprocess_fun ,args):
 
     # Create and compile model
     if chpt:
-        model = load_model(join(paths['models'], chpt))
+        model = load_model(join(path_dict['models'], chpt))
     else:
         model = build_model(NetworkConstr, num_classes)
+        if args.multi_gpu:
+            model = multi_gpu_model(model, cpu_relocation=True)
         model.compile(optimizer=optimizer, loss=loss)
 
     # Create data generators
@@ -77,7 +86,7 @@ def train_model(NetworkConstr,preprocess_fun ,args):
             test_gen = None
     else:
         train_gen = SequenceFromDisk('train', batch_size, img_size,
-                                     preprocessfunc=preprocess_fun)
+                                     preprocessfunc=aug_fun)
         valid_gen = SequenceFromDisk('validation', batch_size, img_size,
                                      preprocessfunc=preprocess_fun)
         if args.create_submission:
@@ -87,18 +96,22 @@ def train_model(NetworkConstr,preprocess_fun ,args):
             test_gen = None
 
     # Fit model
-    pm = F1Utility(valid_gen, test_generator=test_gen,
-                   save_path=path_dict['models/stacks'], save_fname=args.save_filename)
+    if args.multi_gpu:
+        pm = MultiGPUCheckpoint(join(path_dict['models'], args.save_filename),
+                                verbose=1)
+    else:
+        pm = ModelCheckpoint(join(path_dict['models'], args.save_filename),
+                             monitor='val_loss',
+                             save_best_only=True)
 
     train_steps = args.train_steps or len(train_gen)
 
     model.fit_generator(train_gen,
                         epochs=epochs,
                         steps_per_epoch=train_steps,
+                        validation_data=valid_gen,
                         use_multiprocessing=use_multiprocessing,
                         workers=workers,
-                        # This callback does validation, checkpointing and
-                        # submission creation
                         callbacks=[pm],
                         verbose=1)
 
@@ -126,72 +139,22 @@ if __name__ == '__main__':
                    help='Change file loading for Google Cloud Platform')
     p.add_argument('--job-dir', type=str, help='Location of the job directory '
                                                'for the current GCP job')
+    p.add_argument('--multi-gpu', action='store_true')
     args = p.parse_args()
-    
-    
+
     for net in networks.keys():
-        NetworkConstr = networks[net][1]
-        preprocess_fun = networks[net][0].preprocess_input
-        args.save_filename = net
-        print(args.save_filename)
-        train_model(NetworkConstr, preprocess_fun, args)
+        NetworkConstr = networks['{}'.format(net)][1]
+        preprocess_fun = networks['{}'.format(net)][0].preprocess_input
 
-    sys.exit(0)    
+        def augment(batch):
+            batch = preprocess_fun(batch)
+            for i in range(batch.shape[0]):
+                if np.random.random() > .5:
+                    batch[i] = np.fliplr(batch[i])
+            return batch
 
-    
-# KEEP: possibly comes in handy when top layers are different among networks
+        args.save_filename = net + '.h5'
+        train_model(NetworkConstr, augment, preprocess_fun, args)
+        K.clear_session()
 
-#class network_build(object):
-#    def build_model(self, argument):
-#        """network handler
-#            self:: 
-#            argument:: the name of the network (see list below)
-#        """
-#        method_name = 'build_' + str(argument)
-#        # Get the method from 'self'. Default to a lambda.
-#        method = getattr(self, method_name, lambda: "Invalid model")
-#        # Call the method as we return it
-#        return method()
-# 
-#    def build_Xception(self):
-#        self.base_model = Xception(weights='imagenet', pooling='avg', include_top=False)
-#        return self.base_model
-# 
-#    def build_InceptionV3(self):
-#        self.base_model = InceptionV3(weights='imagenet', pooling='avg', include_top=False)
-#        return self.base_model
-#
-#    def build_resnet50(self):
-#        self.base_model = ResNet50(weights='imagenet', pooling='avg', include_top=False)
-#        return self.base_model
-#    
-#    def build_InceptionResNetV2(self):
-#        self.base_model = InceptionResNetV2(weights='imagenet', pooling='avg', include_top=False)
-#        return self.base_model
-#    
-#    def build_densenet201(self):
-#        self.base_model = DenseNet201(weights='imagenet', pooling='avg', include_top=False)
-#        return self.base_model
-#
-##For now, just use this architecture for all of the pretrained networks without
-## any diversifciation between networks. Change later on
-#def add_start_layers(base_model,num_classes):
-#    x = base_model.output
-#    x = Dense(2048, activation='relu', kernel_initializer='he_normal')(x)
-#    predictions = Dense(num_classes, activation='sigmoid',
-#                        kernel_initializer='he_normal')(x)
-#    model = Model(base_model.inputs, predictions)
-#    
-#    for layer in base_model.layers:
-#        layer.trainable = False
-#    
-#    return model
-#        
-#        
-#print('attempting to load model')
-#x = Switcher()
-#x = x.build_model('Xception')
-#
-#model = add_start_layers(x,228)
-#x.summary()
-#model.summary()
+    sys.exit(0)
