@@ -83,7 +83,7 @@ def train_model(args):
     block_indices.extend([248, 279])
     block_indices = block_indices[::-1]
 
-    uc = Finetuning(block_indices)
+    uc = Finetuning(block_indices,lr_reduction=0.3)
 
     train_steps = args.train_steps or len(train_gen)
 

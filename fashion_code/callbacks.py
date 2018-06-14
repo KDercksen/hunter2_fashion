@@ -4,6 +4,7 @@
 from fashion_code.constants import paths
 from keras.callbacks import Callback
 from keras.models import load_model
+import keras.backend as K
 from os.path import join
 from sklearn.metrics import (f1_score,
                              precision_score,
