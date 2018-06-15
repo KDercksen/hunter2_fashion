@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 from fashion_code.constants import num_classes, paths, GCP_paths
 from fashion_code.callbacks import MultiGPUCheckpoint
 from fashion_code.generators import SequenceFromDisk, SequenceFromGCP
+from imgaug import augmenters as iaa
 from keras.applications import (xception,
                                 inception_v3,
                                 resnet50,
@@ -56,7 +57,7 @@ def train_model(NetworkConstr, aug_fun, preprocess_fun, args):
     epochs = args.epochs
     img_size = (299, 299)
     loss = 'binary_crossentropy'
-    optimizer = Adam()
+    optimizer = Adam(decay=1e-6)
     use_multiprocessing = not args.windows
     workers = 0 if args.windows else 8
     if args.gcp:
@@ -148,10 +149,18 @@ if __name__ == '__main__':
 
         def augment(batch):
             batch = preprocess_fun(batch)
-            for i in range(batch.shape[0]):
-                if np.random.random() > .5:
-                    batch[i] = np.fliplr(batch[i])
-            return batch
+            sometimes = lambda aug: iaa.Sometimes(.5, aug)
+            seq = iaa.Sequential([
+                iaa.Fliplr(.5),
+                sometimes(iaa.Affine(rotate=(-20, 20))),
+                sometimes(iaa.AddToHueAndSaturation((-20, 20))),
+                sometimes(iaa.GaussianBlur((0, 2.))),
+                sometimes(iaa.ContrastNormalization((.5, 1.5), per_channel=True)),
+                sometimes(iaa.Sharpen(alpha=(0, 1.), lightness=(.75, 1.5))),
+                sometimes(iaa.Emboss(alpha=(0, 1.), strength=(0, 2.))),
+                sometimes(iaa.Crop(px=(5, 15))),
+            ])
+            return seq.augment_images(batch)
 
         args.save_filename = net + '.h5'
         train_model(NetworkConstr, augment, preprocess_fun, args)

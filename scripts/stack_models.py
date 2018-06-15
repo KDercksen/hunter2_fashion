@@ -36,7 +36,7 @@ from keras.applications.xception import preprocess_input
 from keras.backend import clear_session
 from keras.callbacks import ModelCheckpoint
 from keras.models import Model, load_model
-from keras.optimizers import Adam
+from keras.optimizers import SGD
 from keras.utils import multi_gpu_model
 from model_builds import networks
 from multiprocessing import Pool
@@ -45,6 +45,8 @@ from sklearn.metrics import f1_score
 from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
 import numpy as np
+import tensorflow as tf
+from imgaug import augmenters as iaa
 
 # Define constants
 num_epochs = 25
@@ -53,22 +55,42 @@ batch_size = 128
 
 def load_network(net):
     model = load_model(join(paths['models'], '{}.h5'.format(net)))
+    for l in model.layers[-25:]:
+        l.trainable = True
     return model
+
+
+def augment(batch):
+    batch = preprocess_input(batch)
+    sometimes = lambda aug: iaa.Sometimes(.5, aug)
+    seq = iaa.Sequential([
+        iaa.Fliplr(.5),
+        sometimes(iaa.Affine(rotate=(-20, 20))),
+        sometimes(iaa.AddToHueAndSaturation((-20, 20))),
+        sometimes(iaa.GaussianBlur((0, 2.))),
+        sometimes(iaa.ContrastNormalization((.5, 1.5), per_channel=True)),
+        sometimes(iaa.Sharpen(alpha=(0, 1.), lightness=(.75, 1.5))),
+        sometimes(iaa.Emboss(alpha=(0, 1.), strength=(0, 2.))),
+        sometimes(iaa.Crop(px=(5, 15))),
+    ])
+    return seq.augment_images(batch)
 
 
 for net in networks.keys():
     print('Loading training data for {}...'.format(net))
     img_size = 299
-    val_gen = SequenceFromDisk('validation', 128, (img_size, img_size), preprocess_input)
+    val_gen = SequenceFromDisk('validation', 128, (img_size, img_size), augment)
 
     #Load the trained network from model_build
     path_dict = paths
-    model = load_network(net)
-    opt = Adam(lr=5e-4)
+    with tf.device('/cpu:0'):
+        model = load_network(net)
+    model = multi_gpu_model(model)
+    opt = SGD(lr=1e-4, momentum=.9)
     model.compile(loss='binary_crossentropy', optimizer=opt)
 
-    cp = ModelCheckpoint(join(paths['models'], '{}_val.h5'.format(net)),
-                         save_best_only=True, monitor='loss')
+    cp = MultiGPUCheckpoint(join(paths['models'], '{}_val.h5'.format(net)),
+                            monitor='loss')
 
     model.fit_generator(val_gen,
                         epochs=num_epochs,
