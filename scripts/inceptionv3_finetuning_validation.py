@@ -35,6 +35,7 @@ def train_model(args):
     batch_size = args.batch_size * args.gpus
     chpt = args.continue_from_chpt
     epochs = args.epochs
+    lr_red = args.lr_reduction
     img_size = (299, 299)
     loss = 'binary_crossentropy'
     optimizer = Adam(decay=1e-6)
@@ -83,7 +84,7 @@ def train_model(args):
     block_indices.extend([248, 279])
     block_indices = block_indices[::-1]
 
-    uc = Finetuning(block_indices,lr_reduction=0.3)
+    uc = Finetuning(block_indices,lr_reduction=lr_red)
 
     train_steps = args.train_steps or len(train_gen)
 
@@ -123,6 +124,7 @@ if __name__ == '__main__':
                                                'for the current GCP job')
     p.add_argument('--gpus', type=int, default=1,
                    help='Number of GPUs used for training')
+    p.add_argument('--lr-reduction', type=float, default=0.5, help='Learning rate reduction')
     args = p.parse_args()
 
     train_model(args)
