@@ -99,7 +99,7 @@ def train_model(args):
                         callbacks=[uc, mc],
                         verbose=1)
     '''
-    model.predict_generator(test_gen, steps=len(test_gen),
+    y_preds = model.predict_generator(test_gen, steps=len(test_gen),
                             use_multiprocessing=use_multiprocessing,
                             workers=workers,
                             verbose=1)
