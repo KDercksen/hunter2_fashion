@@ -110,7 +110,7 @@ windows_env/
 .mypy_cache/
 
 # Data folder
-scripts/data
+
 ubuntu_venv/
 <<<<<<< HEAD
 data/
