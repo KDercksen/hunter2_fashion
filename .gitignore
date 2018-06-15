@@ -112,3 +112,8 @@ windows_env/
 # Data folder
 scripts/data
 ubuntu_venv/
+data/train
+data/validation
+data/test
+data/detected
+*.json
