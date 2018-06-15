@@ -112,4 +112,12 @@ windows_env/
 # Data folder
 scripts/data
 ubuntu_venv/
+<<<<<<< HEAD
 data/
+=======
+data/train
+data/validation
+data/test
+data/detected
+*.json
+>>>>>>> 72e9b1490efb813a52ea32209aa8535e3244228c
