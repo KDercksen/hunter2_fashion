@@ -88,7 +88,7 @@ def train_model(args):
 
     train_steps = args.train_steps or len(train_gen)
 
-    '''
+
     model.fit_generator(train_gen,
                         epochs=epochs,
                         steps_per_epoch=train_steps,
@@ -98,6 +98,7 @@ def train_model(args):
                         # submission creation
                         callbacks=[uc, mc],
                         verbose=1)
+
     '''
     y_preds = model.predict_generator(test_gen, steps=len(test_gen),
                             use_multiprocessing=use_multiprocessing,
@@ -105,7 +106,7 @@ def train_model(args):
                             verbose=1)
 
     create_submission(y_preds, 0.2, args.save_filename)
-
+    '''
 
 if __name__ == '__main__':
     p = ArgumentParser('Simple Inceptionv3 script.')
